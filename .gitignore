@@ -1,0 +1,9 @@
+bin/
+obj/
+*.user
+.vs/
+.idea/
+appsettings.Development.json
+appsettings.*.local.json
+*.pfx
+.DS_Store
