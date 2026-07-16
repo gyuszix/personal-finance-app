@@ -1,32 +1,62 @@
 using Microsoft.EntityFrameworkCore;
-using PersonalFinance.Api.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
+using PersonalFinance.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adds OpenAPI/Swagger doc generation
+// ── Docs ──────────────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
-// Registers AppDbContext with DI, tells it to use Postgres with our connection string
+// ── Database ──────────────────────────────────────────────────────────────────
+// Registers AppDbContext with DI, configured to use Postgres
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
-// Registers Identity using our User class, and tells it to store data in AppDbContext
-builder.Services.AddIdentityApiEndpoints<User>().AddEntityFrameworkStores<AppDbContext>();
+// ── Identity ──────────────────────────────────────────────────────────────────
+// Registers Identity using our User class, stores data in AppDbContext
+builder.Services.AddIdentityApiEndpoints<User>()
+    .AddEntityFrameworkStores<AppDbContext>();
 
+// ── Authentication & Authorisation ────────────────────────────────────────────
+// Tells the app to validate incoming JWT tokens against our config
+builder.Services.AddAuthentication().AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+    };
+});
+
+// Registers authorisation services (required for UseAuthorization below)
+builder.Services.AddAuthorization();
+
+// ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-// Maps built-in Identity endpoints (register, login, etc) to our User class
+// ── Endpoints ─────────────────────────────────────────────────────────────────
 app.MapIdentityApi<User>();
+app.MapAuthEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
-    // Serves the OpenAPI spec in development
     app.MapOpenApi();
 }
 
-// Redirects HTTP requests to HTTPS
+// ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.Run();
