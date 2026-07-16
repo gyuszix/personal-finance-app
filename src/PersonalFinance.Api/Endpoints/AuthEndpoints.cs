@@ -11,7 +11,9 @@ namespace PersonalFinance.Api.Endpoints;
 public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
-    {
+    {   
+        app.MapGet("/protected", () => Results.Ok("you are authenticated")).RequireAuthorization();
+        
         app.MapPost("/auth/register", async (RegisterRequest request, UserManager<User> userManager) =>
         {
             var user = new User { UserName = request.Email, Email = request.Email };

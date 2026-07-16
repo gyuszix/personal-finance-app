@@ -24,7 +24,7 @@ builder.Services.AddIdentityApiEndpoints<User>()
 
 // ── Authentication & Authorisation ────────────────────────────────────────────
 // Tells the app to validate incoming JWT tokens against our config
-builder.Services.AddAuthentication().AddJwtBearer(options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
