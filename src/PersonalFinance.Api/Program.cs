@@ -1,43 +1,18 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Endpoints;
+using PersonalFinance.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Docs ──────────────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
 
-// ── Database ──────────────────────────────────────────────────────────────────
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
-
-// ── Identity ──────────────────────────────────────────────────────────────────
-builder.Services.AddIdentityApiEndpoints<User>()
-    .AddRoles<IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>();
-
-// ── Authentication & Authorisation ────────────────────────────────────────────
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
-    };
-});
-
-builder.Services.AddAuthorization();
+// ── Services ──────────────────────────────────────────────────────────────────
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddIdentityServices();
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
