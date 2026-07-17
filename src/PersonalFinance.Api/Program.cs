@@ -13,17 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 // ── Database ──────────────────────────────────────────────────────────────────
-// Registers AppDbContext with DI, configured to use Postgres
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
 // ── Identity ──────────────────────────────────────────────────────────────────
-// Registers Identity using our User class, stores data in AppDbContext
 builder.Services.AddIdentityApiEndpoints<User>()
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>();
 
 // ── Authentication & Authorisation ────────────────────────────────────────────
-// Tells the app to validate incoming JWT tokens against our config
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -39,11 +37,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 
-// Registers authorisation services (required for UseAuthorization below)
 builder.Services.AddAuthorization();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
+
+// ── Seed Roles ────────────────────────────────────────────────────────────────
+using var scope = app.Services.CreateScope();
+var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+string[] roles = ["Admin", "User"];
+
+foreach (var role in roles)
+{
+    if (!await roleManager.RoleExistsAsync(role))
+    {
+        await roleManager.CreateAsync(new IdentityRole(role));
+    }
+}
 
 // ── Endpoints ─────────────────────────────────────────────────────────────────
 app.MapIdentityApi<User>();
