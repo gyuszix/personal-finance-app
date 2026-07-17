@@ -7,5 +7,6 @@ public class Account
     public string BankName {get; set;}
     public string AccountType {get; set;}
     public string PlaidAccountId {get; set;}
+    public string PlaidAccessToken {get; set;}
 
 }

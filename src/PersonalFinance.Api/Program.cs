@@ -13,6 +13,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddDatabase(builder.Configuration);
 builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
+builder.Services.AddPlaidIntegration(builder.Configuration);
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -34,6 +35,7 @@ foreach (var role in roles)
 // ── Endpoints ─────────────────────────────────────────────────────────────────
 app.MapIdentityApi<User>();
 app.MapAuthEndpoints();
+app.MapPlaidEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
