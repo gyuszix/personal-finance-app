@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 using System.Text;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
@@ -53,9 +54,14 @@ public static class ServiceExtensions
 
     public static IServiceCollection AddPlaidIntegration(this IServiceCollection services, IConfiguration config)
     {
-        services.Configure<PlaidOptions>(config.GetSection("Plaid"));
-        services.AddHttpClient<PlaidClient>();
+    services.Configure<PlaidOptions>(config.GetSection("Plaid"));
+    services.AddHttpClient();
+    services.AddSingleton<PlaidClient>(sp =>
+    {
+        var options = sp.GetRequiredService<IOptions<PlaidOptions>>();
+        return new PlaidClient(options);
+    });
 
-        return services;
+    return services;
     }
 }
