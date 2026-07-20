@@ -41,6 +41,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+app.MapTransactionEndpoints();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseHttpsRedirection();
