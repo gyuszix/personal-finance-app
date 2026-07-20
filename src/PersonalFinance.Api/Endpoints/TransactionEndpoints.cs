@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
+using PersonalFinance.Shared.DTOs;
 
 namespace PersonalFinance.Api.Endpoints;
 
@@ -25,7 +26,7 @@ public static class TransactionEndpoints
                 .ToListAsync();
 
             if (!accounts.Any())
-                return Results.Ok(new List<Transaction>());
+                return Results.Ok(new List<TransactionResponse>());
 
             foreach (var account in accounts)
             {
@@ -61,6 +62,13 @@ public static class TransactionEndpoints
 
             var transactions = await db.Transactions
                 .Where(t => accounts.Select(a => a.AccountId).Contains(t.AccountId))
+                .Select(t => new TransactionResponse
+                {
+                    TransactionId = t.TransactionId,
+                    Amount = t.Amount,
+                    Description = t.Description,
+                    Date = t.Date
+                })
                 .ToListAsync();
 
             return Results.Ok(transactions);
