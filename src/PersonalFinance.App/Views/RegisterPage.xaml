@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PersonalFinance.App.ViewModels"
+             x:Class="PersonalFinance.App.Views.RegisterPage"
+             x:DataType="vm:RegisterViewModel"
+             Title="Register">
+
+    <VerticalStackLayout Padding="30" Spacing="20" VerticalOptions="Center">
+
+        <Label Text="Create Account" FontSize="32" HorizontalOptions="Center" />
+
+        <Entry Placeholder="Email"
+               Text="{Binding Email}"
+               Keyboard="Email" />
+
+        <Entry Placeholder="Password"
+               Text="{Binding Password}"
+               IsPassword="True" />
+
+        <Label Text="{Binding ErrorMessage}"
+               TextColor="Red" />
+
+        <ActivityIndicator IsRunning="{Binding IsLoading}"
+                           IsVisible="{Binding IsLoading}" />
+
+        <Button Text="Register"
+                Command="{Binding RegisterCommand}" />
+
+        <Button Text="Back to Login"
+                Command="{Binding GoToLoginCommand}" />
+
+    </VerticalStackLayout>
+
+</ContentPage>
