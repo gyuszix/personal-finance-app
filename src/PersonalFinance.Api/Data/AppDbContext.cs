@@ -17,6 +17,7 @@ public class AppDbContext : IdentityDbContext<User>
 
     public DbSet<Account> Accounts {get; set;}
     public DbSet<Transaction> Transactions {get; set;}
+    public DbSet<RefreshToken> RefreshTokens {get; set;}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
