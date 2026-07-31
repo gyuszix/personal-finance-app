@@ -1,5 +1,6 @@
 using Going.Plaid;
 using Going.Plaid.Transactions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
@@ -72,6 +73,29 @@ public static class TransactionEndpoints
                 .ToListAsync();
 
             return Results.Ok(transactions);
+        }).RequireAuthorization();
+
+        app.MapDelete("/transactions/{id}", async (
+            int id,
+            AppDbContext db,
+            IAuthorizationService authorizationService,
+            HttpContext http) =>
+        {
+            var transaction = await db.Transactions
+                .IgnoreQueryFilters()
+                .FirstOrDefaultAsync(t => t.TransactionId == id);
+
+            if (transaction == null) return Results.NotFound();
+
+            var auth = await authorizationService.AuthorizeAsync(
+                http.User, transaction, "ResourceOwner");
+
+            if (!auth.Succeeded) return Results.Forbid();
+
+            db.Transactions.Remove(transaction);
+            await db.SaveChangesAsync();
+
+            return Results.NoContent();
         }).RequireAuthorization();
     }
 }

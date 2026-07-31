@@ -7,6 +7,8 @@ using System.Text;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
 using Going.Plaid;
+using PersonalFinance.Api.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PersonalFinance.Api.Extensions;
 
@@ -47,7 +49,12 @@ public static class ServiceExtensions
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy("ResourceOwner", policy => policy.Requirements.Add(new ResourceOwnerRequirement()));
+        });
+
+        services.AddScoped<IAuthorizationHandler, TransactionOwnerHandler>();
 
         return services;
     }
