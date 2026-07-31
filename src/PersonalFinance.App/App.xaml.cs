@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace PersonalFinance.App;
+﻿namespace PersonalFinance.App;
 
 public partial class App : Application
 {

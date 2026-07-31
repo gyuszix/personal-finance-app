@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using System.Text;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
-using System.ComponentModel.Design;
 using Going.Plaid;
 
 namespace PersonalFinance.Api.Extensions;

@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Identity;
-using PersonalFinance.Api.Data;
-using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
 
@@ -33,7 +31,6 @@ foreach (var role in roles)
 }
 
 // ── Endpoints ─────────────────────────────────────────────────────────────────
-app.MapIdentityApi<User>();
 app.MapAuthEndpoints();
 app.MapPlaidEndpoints();
 

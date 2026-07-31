@@ -12,15 +12,6 @@ public static class AuthEndpoints
 {
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        // Temporary test route — proves JWT validation works
-        // Replace with real protected endpoints later (e.g. GET /accounts)
-        app.MapGet("/protected", () => Results.Ok("you are authenticated"))
-           .RequireAuthorization();
-
-        // Admin-only test route — proves role-based authorisation works
-        app.MapGet("/admin", () => Results.Ok("you are an admin"))
-           .RequireAuthorization(policy => policy.RequireRole("Admin"));
-
         // Creates a new user — Identity hashes the password and saves to Postgres
         // Automatically assigns the "User" role to every new registration
         app.MapPost("/auth/register", async (
