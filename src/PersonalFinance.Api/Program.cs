@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
 
@@ -8,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 // ── Services ──────────────────────────────────────────────────────────────────
-builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddPlaidIntegration(builder.Configuration);
@@ -16,17 +17,31 @@ builder.Services.AddPlaidIntegration(builder.Configuration);
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-// ── Seed Roles ────────────────────────────────────────────────────────────────
-using var scope = app.Services.CreateScope();
-var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-string[] roles = ["Admin", "User"];
-
-foreach (var role in roles)
+// ── Seed database & roles ─────────────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
 {
-    if (!await roleManager.RoleExistsAsync(role))
+    var services = scope.ServiceProvider;
+
+    // In Testing we run on a fresh in-memory SQLite DB, so build the schema here.
+    // (Production applies EF Core migrations separately.)
+    if (app.Environment.IsEnvironment("Testing"))
     {
-        await roleManager.CreateAsync(new IdentityRole(role));
+        var db = services.GetRequiredService<AppDbContext>();
+        db.Database.EnsureCreated();
+    }
+
+    // Seed roles in every environment — registration assigns the "User" role,
+    // so it must exist before any user can register.
+    var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+    string[] roles = ["Admin", "User"];
+
+    foreach (var role in roles)
+    {
+        if (!await roleManager.RoleExistsAsync(role))
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+        }
     }
 }
 
@@ -46,3 +61,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.Run();
+
+public partial class Program { }

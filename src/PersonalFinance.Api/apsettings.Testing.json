@@ -1,0 +1,10 @@
+{
+  "ConnectionStrings": {
+    "Default": "DataSource=:memory:"
+  },
+  "Jwt": {
+    "Key": "super-secret-test-key-that-is-long-enough-32chars",
+    "Issuer": "PersonalFinance.Api",
+    "Audience": "PersonalFinance.Api"
+  }
+}

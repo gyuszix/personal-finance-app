@@ -3,5 +3,6 @@
     <Project Path="src/PersonalFinance.Api/PersonalFinance.Api.csproj" />
     <Project Path="src/PersonalFinance.App/PersonalFinance.App.csproj" />
     <Project Path="src/PersonalFinance.Shared/PersonalFinance.Shared.csproj" />
+    <Project Path="src/PersonalFinance.Tests/PersonalFinance.Tests.csproj" />
   </Folder>
 </Solution>
