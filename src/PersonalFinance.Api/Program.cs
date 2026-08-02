@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
+using PersonalFinance.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +14,8 @@ builder.Services.AddDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddPlaidIntegration(builder.Configuration);
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
@@ -56,6 +59,7 @@ if (app.Environment.IsDevelopment())
 app.MapTransactionEndpoints();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
