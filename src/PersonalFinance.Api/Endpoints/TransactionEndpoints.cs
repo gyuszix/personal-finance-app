@@ -17,17 +17,25 @@ public static class TransactionEndpoints
             PlaidClient plaid,
             AppDbContext db,
             UserManager<User> userManager,
-            HttpContext http) =>
+            HttpContext http,
+            ILogger<Program> logger) =>
         {
             var userId = userManager.GetUserId(http.User);
             if (userId == null) return Results.Unauthorized();
+
+            logger.LogInformation("Fetching transactions for user {UserId}", userId);
 
             var accounts = await db.Accounts
                 .Where(a => a.UserId == userId)
                 .ToListAsync();
 
             if (!accounts.Any())
+            {
+                logger.LogInformation("User {UserId} has no linked accounts", userId);
                 return Results.Ok(new List<TransactionResponse>());
+            }
+
+            var newTransactionCount = 0;
 
             foreach (var account in accounts)
             {
@@ -55,11 +63,17 @@ public static class TransactionEndpoints
                                 : DateTime.UtcNow,
                             PlaidTransactionId = pt.TransactionId
                         });
+                        newTransactionCount++;
                     }
                 }
             }
 
             await db.SaveChangesAsync();
+
+            logger.LogInformation(
+                "Synced {NewCount} new transactions for user {UserId} across {AccountCount} accounts",
+                newTransactionCount, userId, accounts.Count
+            );
 
             var transactions = await db.Transactions
                 .Where(t => accounts.Select(a => a.AccountId).Contains(t.AccountId))
@@ -72,6 +86,8 @@ public static class TransactionEndpoints
                 })
                 .ToListAsync();
 
+            logger.LogInformation("Returned {Count} transactions for user {UserId}", transactions.Count, userId);
+
             return Results.Ok(transactions);
         }).RequireAuthorization();
 
@@ -79,21 +95,34 @@ public static class TransactionEndpoints
             int id,
             AppDbContext db,
             IAuthorizationService authorizationService,
-            HttpContext http) =>
+            HttpContext http,
+            ILogger<Program> logger) =>
         {
             var transaction = await db.Transactions
                 .IgnoreQueryFilters()
                 .FirstOrDefaultAsync(t => t.TransactionId == id);
 
-            if (transaction == null) return Results.NotFound();
+            if (transaction == null)
+            {
+                logger.LogWarning("Transaction {TransactionId} not found for delete request", id);
+                return Results.NotFound();
+            }
 
             var auth = await authorizationService.AuthorizeAsync(
                 http.User, transaction, "ResourceOwner");
 
-            if (!auth.Succeeded) return Results.Forbid();
+            if (!auth.Succeeded)
+            {
+                logger.LogWarning(
+                    "User {UserId} forbidden from deleting transaction {TransactionId}",
+                    http.User.Identity?.Name, id);
+                return Results.Forbid();
+            }
 
             db.Transactions.Remove(transaction);
             await db.SaveChangesAsync();
+
+            logger.LogInformation("Transaction {TransactionId} deleted", id);
 
             return Results.NoContent();
         }).RequireAuthorization();
