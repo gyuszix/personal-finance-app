@@ -460,3 +460,153 @@ app.Run();
 - Token expires after 1 hour — can be adjusted in `AuthEndpoints.cs`
 - Tested via curl — register returns `"User registered successfully"`, login returns a signed JWT
 - Paste token into jwt.io to inspect header, payload, and signature
+
+## [4] EF Core Global Query Filter + Resource-Based Authorization
+
+### What was done
+- Added a global query filter on `AppDbContext` scoping `Accounts` and `Transactions` to the current user automatically
+- Injected `IHttpContextAccessor` into `AppDbContext` to read the current user's ID from JWT claims at query time
+- Added `ResourceOwnerRequirement` and `TransactionOwnerHandler` implementing `IAuthorizationHandler` for resource-based authorization
+- Wired the new authorization policy into `Program.cs`
+- Used `.IgnoreQueryFilters()` in `DELETE /transactions/{id}` so a not-owned transaction can still be found (returning 403 Forbidden) instead of silently 404ing
+
+### New files
+
+```
+src/PersonalFinance.Api/
+└── Authorization/
+    ├── ResourceOwnerRequirement.cs
+    └── TransactionOwnerHandler.cs
+```
+
+### Why both a query filter AND resource-based auth?
+
+They solve different problems:
+- **Query filter** — prevents a user from ever *seeing* another user's rows in list/query results (defense at the data-access layer)
+- **Resource-based auth** — for single-resource operations (like `DELETE /transactions/{id}`), gives an explicit 403 Forbidden rather than a 404, and is the reusable pattern for "does this user own this specific resource?"
+
+### Notes
+- `IgnoreQueryFilters()` is needed specifically in the delete flow — without it, EF Core's global filter would silently exclude another user's transaction from the query entirely, returning 404 instead of the more correct 403
+- This pattern (fetch with `IgnoreQueryFilters`, then explicitly authorize) generalizes to any per-resource ownership check
+
+---
+
+## [5] Refresh Tokens + Rotation + Reuse Detection
+
+### What was done
+- Added `RefreshToken` entity: `UserId`, `Token`, `ExpiresAt`, `IsRevoked`, `ReplacedByToken`
+- Added `RefreshTokens` DbSet to `AppDbContext`
+- Updated `/auth/login` to issue a refresh token alongside the JWT
+- Added `/auth/refresh` endpoint with token rotation — old token is revoked, a new one issued
+- Added `/auth/revoke` endpoint for explicit logout
+- Reuse detection: if a revoked token is presented again (replay attack), the entire token family for that user is nuked
+- Migration: `AddRefreshtokens`
+
+### Why rotation + reuse detection?
+
+Short-lived JWTs (1hr) limit exposure if stolen, but requiring re-login every hour is bad UX. Refresh tokens let a client silently get a new JWT — but a refresh token is powerful (it can mint new access tokens), so:
+- **Rotation** — every refresh issues a brand new refresh token and revokes the old one, so a refresh token is single-use
+- **Reuse detection** — if someone tries to reuse an already-revoked refresh token, that's a strong signal the token was stolen and used by an attacker (racing the legitimate user). Nuking the whole family forces a fresh login, containing the damage.
+
+### Notes
+- Refresh tokens are stored as opaque random strings (`RandomNumberGenerator.GetBytes(64)`, base64-encoded), not JWTs — no need for them to be self-describing
+- 7-day expiry on refresh tokens vs 1-hour on access tokens
+
+---
+
+## [6] Integration Tests
+
+### What was done
+- Added `PersonalFinance.Tests` project with xUnit and `WebApplicationFactory`
+- Added `TestWebApplicationFactory` running in a `Testing` environment against an in-memory SQLite DB
+- Used a shared-cache SQLite connection so schema persists across requests within a test run
+- Injected JWT config via in-memory configuration for the test environment
+- Guarded role seeding in `Program.cs` behind an environment check (so seeding doesn't clash with test isolation)
+- Added `EnsureCreated()` for the `Testing` environment to build schema at startup (skips full EF Core migrations for speed)
+- Tests cover: register, login success, login wrong password, token refresh, reuse detection
+
+### New files
+
+```
+src/PersonalFinance.Tests/
+├── PersonalFinance.Tests.csproj
+├── AuthEndpointsTests.cs
+└── UnitTest1.cs
+```
+
+### Why `WebApplicationFactory` + SQLite in-memory instead of hitting real Postgres?
+
+- **Speed** — in-memory SQLite spins up instantly per test run, no external DB dependency
+- **Isolation** — each test run gets a clean schema, no risk of polluting the real dev database
+- **Still an integration test** — `WebApplicationFactory` boots the actual `Program.cs` pipeline (middleware, DI, endpoints), so this is testing real request/response behavior, not just isolated unit logic
+
+### Notes
+- `apsettings.Testing.json` (note: contains original typo) supplies test-specific config
+- Reuse detection test is the most valuable one here — it actually exercises the "steal and replay a refresh token" attack path and confirms the whole token family gets revoked
+
+---
+
+## [7] Structured Logging + Global Exception Handling
+
+### What was done
+- Added `ILogger<Program>` to `GET /transactions` and `DELETE /transactions/{id}`, logging user context and outcomes at key decision points (no linked accounts, sync counts, returned counts, not-found/forbidden/deleted)
+- Added `GlobalExceptionHandler : IExceptionHandler` in `Middleware/GlobalExceptionHandler.cs`
+- Registered via `AddExceptionHandler<GlobalExceptionHandler>()` and `AddProblemDetails()` in `Program.cs`
+- Critically: `app.UseExceptionHandler()` must run **first** in the middleware pipeline — middleware wraps everything registered after it, so it needs to be first to catch exceptions from auth, endpoints, etc.
+
+### New files
+
+```
+src/PersonalFinance.Api/
+└── Middleware/
+    └── GlobalExceptionHandler.cs
+```
+
+### Why this matters
+
+- **Before:** unhandled exceptions returned raw stack traces to the client (dev-mode default) — leaking file paths, SQL, internal class names
+- **After:** client gets a clean, RFC 7807-compliant `ProblemDetails` JSON response (`{"type", "title", "status"}`), while the full exception (via `_logger.LogError(exception, ...)`) is captured server-side for debugging
+
+### Notes
+- Verified by temporarily renaming a Postgres table to force a real DB exception — confirmed client got a generic 500 `ProblemDetails` response while the server log captured the full stack trace and SQL error
+- `ILogger` calls use structured placeholders (`"User {UserId} has no linked accounts"`, args passed separately) rather than string interpolation, so log fields stay queryable rather than being baked into a single string
+
+---
+
+## [8] Request Validation + Secrets Management
+
+### What was done
+- Added data annotations (`[Required]`, `[EmailAddress]`, `[MinLength(8)]`) to `RegisterRequest`
+- Added `ValidationFilter<T> : IEndpointFilter` in `Middleware/ValidationFilter.cs`, using `System.ComponentModel.DataAnnotations.Validator` to validate any decorated DTO
+- Attached the filter to `POST /auth/register` via `.AddEndpointFilter<ValidationFilter<RegisterRequest>>()`
+- Initialized `dotnet user-secrets` for `PersonalFinance.Api`
+- Moved `ConnectionStrings:Default`, `Jwt:Key`/`Issuer`/`Audience`, and `Plaid:ClientId`/`Secrets`/`Environment` out of `appsettings.Development.json` into user secrets
+- Emptied `appsettings.Development.json` to `{}` — no sensitive values committed to source control
+
+### Why a reusable endpoint filter instead of manual checks?
+
+Minimal APIs don't get automatic model validation the way MVC controllers with `[ApiController]` do. `IEndpointFilter` runs before the handler and can short-circuit the pipeline — so one `ValidationFilter<T>` class is reusable across any endpoint that takes a validated DTO, returning a standard `ValidationProblem` (per-field errors, RFC 9110 shape) before ever touching `UserManager` or the database.
+
+### Where do user secrets actually live?
+
+`~/.microsoft/usersecrets/{UserSecretsId}/secrets.json` — outside the repo entirely, tied to the local machine and user account via a `UserSecretsId` GUID in the `.csproj` (that GUID itself is safe to commit). **Secrets do not travel with the repo** — cloning onto a new machine requires re-running `dotnet user-secrets set` for each value, since the secrets file itself is never part of git history.
+
+### Notes
+- Verified via curl: missing password, invalid email format, and under-length password all short-circuit with structured 400 responses, no DB hit
+- Verified secrets precedence: emptied `appsettings.Development.json` to `{}` (an empty file with zero bytes is *not* valid JSON and breaks startup — must be `{}`) and confirmed the app still ran correctly, proving all config now comes from user secrets alone
+
+---
+
+## Status: Core Backend Learning Priorities — Complete
+
+All originally-scoped core backend items are done: EF Core global query filter, resource-based authorization, refresh token rotation + reuse detection, integration tests, structured logging, global exception handling, request validation, and secrets management.
+
+### Remaining (secondary / lower priority — Plaid & MAUI specific)
+- Plaid cursor sync (`/transactions/sync`) — replace 30-day polling with proper incremental sync
+- Encrypted Plaid access token storage (`IDataProtector`)
+- Pagination on `GET /transactions`
+- `BankName` / `AccountType` / `personal_finance_category` from Plaid metadata
+- API versioning (`/v1/...`)
+- Refit client for MAUI (replacing plain `HttpClient`)
+- Local SQLite cache in MAUI (offline support)
+- `docker-compose.yml` for reproducible local Postgres setup
