@@ -9,4 +9,9 @@ public class Transaction
     public string PlaidTransactionId {get; set;}
 
     public string UserId {get; set;}
+
+    public bool IsPending {get; set;}
+    public string? PendingTransactionId {get; set;}
+    public string? CategoryPrimary {get; set;}
+    public string? CategoryDetailed {get; set;}
 }

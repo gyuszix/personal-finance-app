@@ -2,6 +2,7 @@ using Going.Plaid;
 using Going.Plaid.Link;
 using Going.Plaid.Entity;
 using Going.Plaid.Item;
+using Going.Plaid.Accounts;
 using Microsoft.AspNetCore.Identity;
 using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Data;
@@ -46,21 +47,33 @@ public static class PlaidEndpoints
             var userId = userManager.GetUserId(http.User);
             if (userId == null) return Results.Unauthorized();
 
-            var response = await plaid.ItemPublicTokenExchangeAsync(new ItemPublicTokenExchangeRequest
+            var exchangeResponse = await plaid.ItemPublicTokenExchangeAsync(new ItemPublicTokenExchangeRequest
             {
                 PublicToken = request.PublicToken
             });
 
-            var account = new PersonalFinance.Api.Entities.Account
-            {
-                UserId = userId,
-                PlaidAccessToken = response.AccessToken,
-                BankName = "Unknown",
-                AccountType = "Unknown",
-                PlaidAccountId = response.ItemId
-            };
+            var accessToken = exchangeResponse.AccessToken;
 
-            db.Accounts.Add(account);
+            var accountsResponse = await plaid.AccountsGetAsync(new AccountsGetRequest
+            {
+                AccessToken = accessToken
+            });
+
+            foreach (var plaidAccount in accountsResponse.Accounts)
+            {
+                var account = new PersonalFinance.Api.Entities.Account
+                {
+                    UserId = userId,
+                    PlaidAccessToken = accessToken,
+                    PlaidAccountId = plaidAccount.AccountId,
+                    BankName = accountsResponse.Item.InstitutionId ?? "Unknown",
+                    AccountType = plaidAccount.Type.ToString(),
+                    Balance = plaidAccount.Balances.Current ?? 0
+                };
+
+                db.Accounts.Add(account);
+            }
+
             await db.SaveChangesAsync();
 
             return Results.Ok("Bank account linked successfully");

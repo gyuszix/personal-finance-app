@@ -8,5 +8,5 @@ public class Account
     public string AccountType {get; set;}
     public string PlaidAccountId {get; set;}
     public string PlaidAccessToken {get; set;}
-
+    public string? SyncCursor {get; set;}
 }

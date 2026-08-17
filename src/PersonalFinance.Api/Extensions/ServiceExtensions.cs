@@ -11,6 +11,7 @@ using PersonalFinance.Api.Entities;
 using Going.Plaid;
 using PersonalFinance.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
+using PersonalFinance.Api.Services;
 
 namespace PersonalFinance.Api.Extensions;
 
@@ -80,6 +81,7 @@ public static class ServiceExtensions
 
     public static IServiceCollection AddPlaidIntegration(this IServiceCollection services, IConfiguration config)
     {
+        services.AddScoped<PlaidSyncService>();
         services.Configure<PlaidOptions>(config.GetSection("Plaid"));
         services.AddHttpClient();
         services.AddSingleton<PlaidClient>(sp =>
