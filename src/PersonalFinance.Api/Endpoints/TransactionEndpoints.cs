@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
+using PersonalFinance.Api.DTOs;
 using PersonalFinance.Api.Entities;
+using PersonalFinance.Api.Middleware;
 using PersonalFinance.Api.Services;
 using PersonalFinance.Shared.DTOs;
 
@@ -13,6 +15,7 @@ public static class TransactionEndpoints
     public static void MapTransactionEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/transactions", async (
+            [AsParameters] TransactionQueryParameters query,
             AppDbContext db,
             UserManager<User> userManager,
             HttpContext http,
@@ -20,19 +23,47 @@ public static class TransactionEndpoints
         {
             var userId = userManager.GetUserId(http.User);
             if (userId == null) return Results.Unauthorized();
-            var transactions = await db.Transactions
+
+            var transactionsQuery = db.Transactions.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.Category))
+            {
+                transactionsQuery = transactionsQuery.Where(t => t.CategoryPrimary == query.Category);
+            }
+
+            var page = query.ResolvedPage;
+            var pageSize = query.ResolvedPageSize;
+            var totalCount = await transactionsQuery.CountAsync();
+
+            var transactions = await transactionsQuery
                 .OrderByDescending(t => t.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(t => new TransactionResponse
                 {
                     TransactionId = t.TransactionId,
                     Amount = t.Amount,
                     Description = t.Description,
-                    Date = t.Date
+                    Date = t.Date,
+                    CategoryPrimary = t.CategoryPrimary
                 })
                 .ToListAsync();
-            logger.LogInformation("Returned {Count} transactions for user {UserId}", transactions.Count, userId);
-            return Results.Ok(transactions);
-        }).RequireAuthorization();
+
+            logger.LogInformation(
+                "Returned {Count} of {TotalCount} transactions for user {UserId} (page {Page}, category {Category})",
+                transactions.Count, totalCount, userId, page, query.Category ?? "(none)");
+
+            return Results.Ok(new PagedResult<TransactionResponse>
+            {
+                Items = transactions,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                HasMore = page * pageSize < totalCount
+            });
+        })
+        .RequireAuthorization()
+        .AddEndpointFilter<ValidationFilter<TransactionQueryParameters>>();
 
         app.MapPost("/transactions/sync", async (
             PlaidSyncService syncService,

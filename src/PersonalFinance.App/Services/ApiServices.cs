@@ -53,14 +53,16 @@ public class ApiService
         return response.IsSuccessStatusCode;
     }
 
-    // GET /api/v1/transactions
+    // GET /api/v1/transactions - pageSize is large enough to keep today's
+    // "load everything at once" UI behavior; proper infinite-scroll paging
+    // is GUI work, not covered here
     public async Task<List<TransactionResponse>> GetTransactionsAsync()
     {
-        var response = await _http.GetAsync("/api/v1/transactions");
+        var response = await _http.GetAsync("/api/v1/transactions?pageSize=200");
         if (!response.IsSuccessStatusCode) return [];
 
-        return await response.Content.ReadFromJsonAsync<List<TransactionResponse>>()
-               ?? [];
+        var result = await response.Content.ReadFromJsonAsync<PagedResult<TransactionResponse>>();
+        return result?.Items ?? [];
     }
 
     // GET /api/v1/plaid/link-token
