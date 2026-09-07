@@ -63,6 +63,7 @@ var apiV1 = app.MapGroup("/api/v{version:apiVersion}")
 apiV1.MapAuthEndpoints();
 apiV1.MapPlaidEndpoints();
 apiV1.MapTransactionEndpoints();
+apiV1.MapAccountEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
