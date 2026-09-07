@@ -1,3 +1,5 @@
+using Asp.Versioning;
+using Asp.Versioning.Builder;
 using Microsoft.AspNetCore.Identity;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
@@ -14,6 +16,7 @@ builder.Services.AddDatabase(builder.Configuration, builder.Environment);
 builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddPlaidIntegration(builder.Configuration);
+builder.Services.AddApiVersioningSetup();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -49,14 +52,22 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Endpoints ─────────────────────────────────────────────────────────────────
-app.MapAuthEndpoints();
-app.MapPlaidEndpoints();
+var apiVersionSet = app.NewApiVersionSet()
+    .HasApiVersion(new ApiVersion(1.0))
+    .ReportApiVersions()
+    .Build();
+
+var apiV1 = app.MapGroup("/api/v{version:apiVersion}")
+    .WithApiVersionSet(apiVersionSet);
+
+apiV1.MapAuthEndpoints();
+apiV1.MapPlaidEndpoints();
+apiV1.MapTransactionEndpoints();
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-app.MapTransactionEndpoints();
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseExceptionHandler();

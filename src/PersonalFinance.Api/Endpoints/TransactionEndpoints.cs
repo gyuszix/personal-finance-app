@@ -10,7 +10,7 @@ namespace PersonalFinance.Api.Endpoints;
 
 public static class TransactionEndpoints
 {
-    public static void MapTransactionEndpoints(this WebApplication app)
+    public static void MapTransactionEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/transactions", async (
             AppDbContext db,

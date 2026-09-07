@@ -12,6 +12,7 @@ using Going.Plaid;
 using PersonalFinance.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.Api.Services;
+using Asp.Versioning;
 
 namespace PersonalFinance.Api.Extensions;
 
@@ -75,6 +76,19 @@ public static class ServiceExtensions
         });
 
         services.AddScoped<IAuthorizationHandler, TransactionOwnerHandler>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddApiVersioningSetup(this IServiceCollection services)
+    {
+        services.AddApiVersioning(options =>
+        {
+            options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1.0);
+            options.AssumeDefaultVersionWhenUnspecified = true;
+            options.ReportApiVersions = true;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+        });
 
         return services;
     }
