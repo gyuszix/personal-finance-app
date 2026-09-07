@@ -6,19 +6,20 @@ using PersonalFinance.Api.Entities;
 
 namespace PersonalFinance.Api.Services;
 
-public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidSyncService> logger)
+public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidSyncService> logger, PlaidTokenProtector protector)
 {
   public async Task<(int added, int modified, int removed)> SyncAccountAsync(Account account)
   {
     int added = 0, modified = 0, removed = 0;
     var cursor = account.SyncCursor;
+    var accessToken = protector.Unprotect(account.PlaidAccessToken);
     bool hasMore;
 
     do
     {
       var response = await plaid.TransactionsSyncAsync(new TransactionsSyncRequest
       {
-        AccessToken = account.PlaidAccessToken,
+        AccessToken = accessToken,
         Cursor = cursor
       });
 

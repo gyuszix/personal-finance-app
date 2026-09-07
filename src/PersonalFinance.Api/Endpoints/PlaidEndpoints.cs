@@ -6,6 +6,7 @@ using Going.Plaid.Accounts;
 using Microsoft.AspNetCore.Identity;
 using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Data;
+using PersonalFinance.Api.Services;
 
 namespace PersonalFinance.Api.Endpoints;
 
@@ -42,6 +43,7 @@ public static class PlaidEndpoints
             PlaidClient plaid,
             AppDbContext db,
             UserManager<User> userManager,
+            PlaidTokenProtector protector,
             HttpContext http) =>
         {
             var userId = userManager.GetUserId(http.User);
@@ -52,6 +54,7 @@ public static class PlaidEndpoints
                 PublicToken = request.PublicToken
             });
 
+            // Real access token - only used to call Plaid, never persisted as-is
             var accessToken = exchangeResponse.AccessToken;
 
             var accountsResponse = await plaid.AccountsGetAsync(new AccountsGetRequest
@@ -59,12 +62,14 @@ public static class PlaidEndpoints
                 AccessToken = accessToken
             });
 
+            var protectedAccessToken = protector.Protect(accessToken);
+
             foreach (var plaidAccount in accountsResponse.Accounts)
             {
                 var account = new PersonalFinance.Api.Entities.Account
                 {
                     UserId = userId,
-                    PlaidAccessToken = accessToken,
+                    PlaidAccessToken = protectedAccessToken,
                     PlaidAccountId = plaidAccount.AccountId,
                     BankName = accountsResponse.Item.InstitutionId ?? "Unknown",
                     AccountType = plaidAccount.Type.ToString(),
