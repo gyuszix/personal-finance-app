@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Single source of truth for the project version, shared by every
+    project under src/ (Api, Shared, App). Bump this alongside a new
+    CHANGELOG.md entry and a matching git tag (vX.Y.Z) - see CHANGELOG.md
+    for the convention.
+  -->
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+</Project>
