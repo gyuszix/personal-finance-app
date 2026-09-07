@@ -1,4 +1,5 @@
 using Going.Plaid;
+using Going.Plaid.Accounts;
 using Going.Plaid.Transactions;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
@@ -77,10 +78,27 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
     } while (hasMore);
 
     account.SyncCursor = cursor;
+
+    // Refresh the cached balance - Account.Balance is otherwise only ever
+    // set once, at link time, and would go stale forever without this.
+    var balanceResponse = await plaid.AccountsBalanceGetAsync(new AccountsBalanceGetRequest
+    {
+      AccessToken = accessToken
+    });
+
+    var matchingAccount = balanceResponse.Accounts
+      .FirstOrDefault(a => a.AccountId == account.PlaidAccountId);
+
+    if (matchingAccount is not null)
+    {
+      account.Balance = (decimal)(matchingAccount.Balances.Current ?? 0);
+    }
+
     await db.SaveChangesAsync();
-    
+
     logger.LogInformation(
-        "Synced account {AccountId}: {Added} added, {Modified} modified, {Removed} removed", account.AccountId, added, modified, removed); 
+        "Synced account {AccountId}: {Added} added, {Modified} modified, {Removed} removed, balance refreshed to {Balance}",
+        account.AccountId, added, modified, removed, account.Balance);
     return (added, modified, removed);
   }
 }
