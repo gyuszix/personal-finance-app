@@ -33,9 +33,7 @@ src/
 
 ## Local development
 
-```bash
-docker compose up -d    # Postgres on localhost:5432
-```
+> Note: `docker-compose.yml` doesn't exist yet (tracked in Remaining below) — for now, point `ConnectionStrings:Default` (via `dotnet user-secrets`) at a locally-installed Postgres instance.
 
 # Build Log
 
@@ -597,16 +595,33 @@ Minimal APIs don't get automatic model validation the way MVC controllers with `
 
 ---
 
+## [9] Plaid Cursor-Based Transaction Sync
+
+### What was done
+- Added `PlaidSyncService.SyncAccountAsync`, driving Plaid's `/transactions/sync` endpoint via `TransactionsSyncRequest`/cursor instead of the old 30-day polling window
+- Persists `SyncCursor` on `Account`, looping while `HasMore` is true and paging through `Added` / `Modified` / `Removed` on each iteration
+- Added `IsPending`, `PendingTransactionId`, `CategoryPrimary`, `CategoryDetailed` to `Transaction`, populated from Plaid's `personal_finance_category` and pending-transaction metadata
+- `POST /transactions/sync` now calls the sync service per linked account and returns added/modified/removed counts
+- Migrations: `AddTransactionSyncFields`, `FixCategoryDetailedColumnName`
+
+### Why cursor sync instead of polling?
+
+Polling a fixed 30-day window re-fetches transactions that haven't changed and misses edits/removals outside that window. Plaid's sync endpoint is incremental: given a stored cursor, it returns only what changed (added, modified, removed) since the last call, and hands back a new cursor to persist for next time — cheaper, and correctly reflects removals and category corrections instead of just new rows.
+
+### Notes
+- `Modified`/`Removed` lookups use `IgnoreQueryFilters()` since the sync runs outside a per-request user context — ownership isn't in question here, the account was already scoped to the user before sync started
+- `BankName` / `AccountType` were already captured at link time (`PlaidEndpoints.cs`); this stage adds the categorization fields that only show up on individual transactions
+
+---
+
 ## Status: Core Backend Learning Priorities — Complete
 
-All originally-scoped core backend items are done: EF Core global query filter, resource-based authorization, refresh token rotation + reuse detection, integration tests, structured logging, global exception handling, request validation, and secrets management.
+All originally-scoped core backend items are done: EF Core global query filter, resource-based authorization, refresh token rotation + reuse detection, integration tests, structured logging, global exception handling, request validation, secrets management, and Plaid cursor-based sync.
 
 ### Remaining (secondary / lower priority — Plaid & MAUI specific)
-- Plaid cursor sync (`/transactions/sync`) — replace 30-day polling with proper incremental sync
-- Encrypted Plaid access token storage (`IDataProtector`)
+- Encrypted Plaid access token storage (`IDataProtector`) — currently stored in plaintext
 - Pagination on `GET /transactions`
-- `BankName` / `AccountType` / `personal_finance_category` from Plaid metadata
-- API versioning (`/v1/...`)
+- API versioning (`/api/v1/...`)
 - Refit client for MAUI (replacing plain `HttpClient`)
 - Local SQLite cache in MAUI (offline support)
 - `docker-compose.yml` for reproducible local Postgres setup
