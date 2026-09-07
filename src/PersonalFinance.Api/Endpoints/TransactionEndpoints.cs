@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,59 @@ public static class TransactionEndpoints
         })
         .RequireAuthorization()
         .AddEndpointFilter<ValidationFilter<TransactionQueryParameters>>();
+
+        // Spend by category for a given month (defaults to the current month).
+        // Excludes pending transactions - they can still change amount/category
+        // before they post, so including them would make totals unstable.
+        app.MapGet("/transactions/summary", async (
+            string? month,
+            AppDbContext db,
+            UserManager<User> userManager,
+            HttpContext http,
+            ILogger<Program> logger) =>
+        {
+            var userId = userManager.GetUserId(http.User);
+            if (userId == null) return Results.Unauthorized();
+
+            DateTime periodStart;
+            if (string.IsNullOrWhiteSpace(month))
+            {
+                var now = DateTime.UtcNow;
+                periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            }
+            else if (DateTime.TryParseExact(
+                month, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                periodStart = DateTime.SpecifyKind(new DateTime(parsed.Year, parsed.Month, 1), DateTimeKind.Utc);
+            }
+            else
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["month"] = ["month must be in yyyy-MM format, e.g. 2026-09"]
+                });
+            }
+
+            var periodEnd = periodStart.AddMonths(1);
+
+            var summary = await db.Transactions
+                .Where(t => !t.IsPending && t.Date >= periodStart && t.Date < periodEnd)
+                .GroupBy(t => t.CategoryPrimary ?? "Uncategorized")
+                .Select(g => new TransactionSummaryResponse
+                {
+                    Category = g.Key,
+                    Total = g.Sum(t => t.Amount),
+                    TransactionCount = g.Count()
+                })
+                .OrderByDescending(s => s.Total)
+                .ToListAsync();
+
+            logger.LogInformation(
+                "Returned spend summary for user {UserId}, period {PeriodStart:yyyy-MM}, {CategoryCount} categories",
+                userId, periodStart, summary.Count);
+
+            return Results.Ok(summary);
+        }).RequireAuthorization();
 
         app.MapPost("/transactions/sync", async (
             PlaidSyncService syncService,
