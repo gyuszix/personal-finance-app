@@ -25,10 +25,10 @@ public class ApiService
             new AuthenticationHeaderValue("Bearer", token);
     }
 
-    // POST /auth/login
+    // POST /api/v1/auth/login
     public async Task<string?> LoginAsync(string email, string password)
     {
-        var response = await _http.PostAsJsonAsync("/auth/login", new
+        var response = await _http.PostAsJsonAsync("/api/v1/auth/login", new
         {
             email,
             password
@@ -41,10 +41,10 @@ public class ApiService
         return result?.Token;
     }
 
-    // POST /auth/register
+    // POST /api/v1/auth/register
     public async Task<bool> RegisterAsync(string email, string password)
     {
-        var response = await _http.PostAsJsonAsync("/auth/register", new
+        var response = await _http.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email,
             password
@@ -53,30 +53,30 @@ public class ApiService
         return response.IsSuccessStatusCode;
     }
 
-    // GET /transactions
+    // GET /api/v1/transactions
     public async Task<List<TransactionResponse>> GetTransactionsAsync()
     {
-        var response = await _http.GetAsync("/transactions");
+        var response = await _http.GetAsync("/api/v1/transactions");
         if (!response.IsSuccessStatusCode) return [];
 
         return await response.Content.ReadFromJsonAsync<List<TransactionResponse>>()
                ?? [];
     }
 
-    // GET /plaid/link-token
+    // GET /api/v1/plaid/link-token
     public async Task<string?> GetLinkTokenAsync()
     {
-        var response = await _http.GetAsync("/plaid/link-token");
+        var response = await _http.GetAsync("/api/v1/plaid/link-token");
         if (!response.IsSuccessStatusCode) return null;
 
         var result = await response.Content.ReadFromJsonAsync<LinkTokenResponse>();
         return result?.LinkToken;
     }
 
-    // POST /plaid/exchange-token
+    // POST /api/v1/plaid/exchange-token
     public async Task<bool> ExchangeTokenAsync(string publicToken)
     {
-        var response = await _http.PostAsJsonAsync("/plaid/exchange-token", new
+        var response = await _http.PostAsJsonAsync("/api/v1/plaid/exchange-token", new
         {
             publicToken
         });

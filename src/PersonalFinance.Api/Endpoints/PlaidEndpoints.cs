@@ -11,7 +11,7 @@ namespace PersonalFinance.Api.Endpoints;
 
 public static class PlaidEndpoints
 {
-    public static void MapPlaidEndpoints(this WebApplication app)
+    public static void MapPlaidEndpoints(this IEndpointRouteBuilder app)
     {
         // Returns a link_token — frontend uses this to open the Plaid Link UI
         app.MapGet("/plaid/link-token", async (

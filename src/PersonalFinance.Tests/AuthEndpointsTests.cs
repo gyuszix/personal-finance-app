@@ -37,7 +37,7 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task Register_ReturnsOk()
     {
-        var response = await _client.PostAsJsonAsync("/auth/register", new
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "test@example.com",
             password = "Test123!"
@@ -49,13 +49,13 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task Login_WithValidCredentials_ReturnsTokens()
     {
-        await _client.PostAsJsonAsync("/auth/register", new
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "login@example.com",
             password = "Test123!"
         });
 
-        var response = await _client.PostAsJsonAsync("/auth/login", new
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             email = "login@example.com",
             password = "Test123!"
@@ -71,13 +71,13 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task Login_WithWrongPassword_ReturnsUnauthorized()
     {
-        await _client.PostAsJsonAsync("/auth/register", new
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "wrong@example.com",
             password = "Test123!"
         });
 
-        var response = await _client.PostAsJsonAsync("/auth/login", new
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             email = "wrong@example.com",
             password = "WrongPassword!"
@@ -89,13 +89,13 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task Refresh_WithValidToken_ReturnsNewTokens()
     {
-        await _client.PostAsJsonAsync("/auth/register", new
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "refresh@example.com",
             password = "Test123!"
         });
 
-        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             email = "refresh@example.com",
             password = "Test123!"
@@ -103,7 +103,7 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
 
         var tokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
 
-        var refreshResponse = await _client.PostAsJsonAsync("/auth/refresh", new
+        var refreshResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new
         {
             refreshToken = tokens!.RefreshToken
         });
@@ -118,13 +118,13 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     [Fact]
     public async Task Refresh_WithUsedToken_ReturnsUnauthorized()
     {
-        await _client.PostAsJsonAsync("/auth/register", new
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {
             email = "reuse@example.com",
             password = "Test123!"
         });
 
-        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             email = "reuse@example.com",
             password = "Test123!"
@@ -132,12 +132,12 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
 
         var tokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
 
-        await _client.PostAsJsonAsync("/auth/refresh", new
+        await _client.PostAsJsonAsync("/api/v1/auth/refresh", new
         {
             refreshToken = tokens!.RefreshToken
         });
 
-        var reuseResponse = await _client.PostAsJsonAsync("/auth/refresh", new
+        var reuseResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new
         {
             refreshToken = tokens.RefreshToken
         });
