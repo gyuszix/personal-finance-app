@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: personalfinance-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: personalfinance
+      # Trust auth (no password) to match the no-password local dev setup
+      # this replaces. Fine for local dev only - never use in production.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - personalfinance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  personalfinance-postgres-data:
