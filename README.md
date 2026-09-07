@@ -33,7 +33,23 @@ src/
 
 ## Local development
 
-> Note: `docker-compose.yml` doesn't exist yet (tracked in Remaining below) — for now, point `ConnectionStrings:Default` (via `dotnet user-secrets`) at a locally-installed Postgres instance.
+```bash
+docker compose up -d    # Postgres 16 on localhost:5432, db "personalfinance", user "postgres", no password (trust auth, local dev only)
+```
+
+Point the API at it via user secrets (run once, from `src/PersonalFinance.Api/`):
+
+```bash
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=personalfinance;Username=postgres"
+dotnet user-secrets set "Jwt:Key" "<32+ character secret key>"
+dotnet user-secrets set "Jwt:Issuer" "PersonalFinance.Api"
+dotnet user-secrets set "Jwt:Audience" "PersonalFinance.Api"
+dotnet user-secrets set "Plaid:ClientId" "<your Plaid sandbox client id>"
+dotnet user-secrets set "Plaid:Secret" "<your Plaid sandbox secret>"
+dotnet user-secrets set "Plaid:Environment" "sandbox"
+```
+
+Then apply migrations: `dotnet ef database update --project src/PersonalFinance.Api`
 
 # Build Log
 
@@ -624,4 +640,3 @@ All originally-scoped core backend items are done: EF Core global query filter, 
 - API versioning (`/api/v1/...`)
 - Refit client for MAUI (replacing plain `HttpClient`)
 - Local SQLite cache in MAUI (offline support)
-- `docker-compose.yml` for reproducible local Postgres setup
