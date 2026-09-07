@@ -103,6 +103,8 @@ public static class ServiceExtensions
             var options = sp.GetRequiredService<IOptions<PlaidOptions>>();
             return new PlaidClient(options);
         });
+        services.AddDataProtection();
+        services.AddSingleton<PlaidTokenProtector>();
 
         return services;
     }
