@@ -79,18 +79,7 @@ public static class TransactionEndpoints
             var userId = userManager.GetUserId(http.User);
             if (userId == null) return Results.Unauthorized();
 
-            DateTime periodStart;
-            if (string.IsNullOrWhiteSpace(month))
-            {
-                var now = DateTime.UtcNow;
-                periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-            }
-            else if (DateTime.TryParseExact(
-                month, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-            {
-                periodStart = DateTime.SpecifyKind(new DateTime(parsed.Year, parsed.Month, 1), DateTimeKind.Utc);
-            }
-            else
+            if (!TryResolveMonthPeriod(month, out var periodStart))
             {
                 return Results.ValidationProblem(new Dictionary<string, string[]>
                 {
@@ -117,6 +106,61 @@ public static class TransactionEndpoints
                 userId, periodStart, summary.Count);
 
             return Results.Ok(summary);
+        }).RequireAuthorization();
+
+        // Income vs. expense for a given month (same default/format as
+        // /transactions/summary). Excludes pending transactions (same reason
+        // as above) and transfer categories - TRANSFER_IN/TRANSFER_OUT are
+        // money moving between the user's own linked accounts, not real
+        // income or spending, and including them would double-count and
+        // inflate both sides of the cash flow.
+        app.MapGet("/transactions/cashflow", async (
+            string? month,
+            AppDbContext db,
+            UserManager<User> userManager,
+            HttpContext http,
+            ILogger<Program> logger) =>
+        {
+            var userId = userManager.GetUserId(http.User);
+            if (userId == null) return Results.Unauthorized();
+
+            if (!TryResolveMonthPeriod(month, out var periodStart))
+            {
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                {
+                    ["month"] = ["month must be in yyyy-MM format, e.g. 2026-09"]
+                });
+            }
+
+            var periodEnd = periodStart.AddMonths(1);
+
+            // Plaid convention: positive Amount = money out (expense),
+            // negative Amount = money in (income) - see /transactions/summary
+            // for the same convention showing up in per-category totals.
+            var cashflowTransactions = db.Transactions.Where(t =>
+                !t.IsPending
+                && t.Date >= periodStart && t.Date < periodEnd
+                && t.CategoryPrimary != "TRANSFER_IN"
+                && t.CategoryPrimary != "TRANSFER_OUT");
+
+            var income = await cashflowTransactions
+                .Where(t => t.Amount < 0)
+                .SumAsync(t => -t.Amount);
+
+            var expenses = await cashflowTransactions
+                .Where(t => t.Amount >= 0)
+                .SumAsync(t => t.Amount);
+
+            logger.LogInformation(
+                "Returned cash flow for user {UserId}, period {PeriodStart:yyyy-MM}: income {Income}, expenses {Expenses}",
+                userId, periodStart, income, expenses);
+
+            return Results.Ok(new CashflowResponse
+            {
+                Income = income,
+                Expenses = expenses,
+                Net = income - expenses
+            });
         }).RequireAuthorization();
 
         app.MapPost("/transactions/sync", async (
@@ -177,5 +221,30 @@ public static class TransactionEndpoints
 
             return Results.NoContent();
         }).RequireAuthorization();
+    }
+
+    // Shared by /transactions/summary and /transactions/cashflow - resolves
+    // a "yyyy-MM" query param to the first instant of that month (UTC),
+    // defaulting to the current month when omitted. Returns false (instead
+    // of throwing) on an unparseable month so callers can turn it into a
+    // 400 ValidationProblem.
+    private static bool TryResolveMonthPeriod(string? month, out DateTime periodStart)
+    {
+        if (string.IsNullOrWhiteSpace(month))
+        {
+            var now = DateTime.UtcNow;
+            periodStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            return true;
+        }
+
+        if (DateTime.TryParseExact(
+            month, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        {
+            periodStart = DateTime.SpecifyKind(new DateTime(parsed.Year, parsed.Month, 1), DateTimeKind.Utc);
+            return true;
+        }
+
+        periodStart = default;
+        return false;
     }
 }
