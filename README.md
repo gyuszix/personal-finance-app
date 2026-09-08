@@ -1,6 +1,6 @@
 # Personal Finance Tracker
 
-**Version:** [0.1.0](CHANGELOG.md#010---2026-09-07)
+**Version:** [0.2.0](CHANGELOG.md#020---2026-09-08)
 
 A cross-platform personal finance app that connects to bank accounts (via Plaid) and provides spending insights, transaction history, and budget tracking. Runs on iOS, Android, macOS, and Windows from a single codebase.
 

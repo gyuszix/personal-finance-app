@@ -10,6 +10,24 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-08
+
+Backend hardening/scaling pass - the four items on the "someday" backlog,
+all built with framework-native tooling, no new paid services.
+
+### Added
+- Rate limiting (`Microsoft.AspNetCore.RateLimiting`) - stricter policy on
+  `/auth/register`/`/auth/login` (10 req/min/IP), general policy elsewhere
+  (200 req/min/IP)
+- Response caching (`IMemoryCache`) for `accounts/summary`,
+  `transactions/summary`, and `transactions/cashflow`, invalidated on sync
+- `ScheduledPlaidSyncService` - background job syncing every linked account
+  across every user on a timer (`Sync:IntervalMinutes`, default 30),
+  instead of only syncing when a client calls `POST /transactions/sync`
+- Real-time sync notifications via SignalR (`TransactionsHub`) - connected
+  clients get pushed a `SyncCompleted` event instead of having to poll
+- Interactive API docs (`Scalar.AspNetCore`) at `/scalar/v1` in Development
+
 ## [0.1.0] - 2026-09-07
 
 Initial backend implementation - everything from project scaffolding through
