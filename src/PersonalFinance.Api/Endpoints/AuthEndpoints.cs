@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PersonalFinance.Api.Data;
@@ -31,8 +32,8 @@ public static class AuthEndpoints
 
             return Results.BadRequest(result.Errors);
         })
-        .AddEndpointFilter<ValidationFilter<RegisterRequest>>();
-        ;
+        .AddEndpointFilter<ValidationFilter<RegisterRequest>>()
+        .RequireRateLimiting("auth");
 
         app.MapPost("/auth/login", async (
             LoginRequest request,
@@ -55,7 +56,8 @@ public static class AuthEndpoints
                 token = jwt,
                 refreshToken = refreshToken.Token
             });
-        });
+        })
+        .RequireRateLimiting("auth");
 
         // Issues a new JWT + refresh token, rotates the old refresh token
         app.MapPost("/auth/refresh", async (
