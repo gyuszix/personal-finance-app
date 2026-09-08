@@ -5,6 +5,7 @@ using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
 using PersonalFinance.Api.Middleware;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,7 @@ builder.Services.AddIdentityServices();
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddPlaidIntegration(builder.Configuration);
 builder.Services.AddApiVersioningSetup();
+builder.Services.AddRateLimitingSetup(builder.Environment);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -68,11 +70,14 @@ apiV1.MapAccountEndpoints();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // Interactive "try it out" API docs UI - open http://localhost:5140/scalar/v1
+    app.MapScalarApiReference();
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
