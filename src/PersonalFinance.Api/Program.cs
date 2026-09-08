@@ -5,6 +5,7 @@ using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
 using PersonalFinance.Api.Middleware;
+using PersonalFinance.Api.Services;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,15 @@ builder.Services.AddRateLimitingSetup(builder.Environment);
 builder.Services.AddSummaryCaching();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+// Skip the scheduled sync job in Testing - integration tests spin up a
+// fresh, empty in-memory DB each run, so it would just be dead weight
+// (0 accounts to sync), and keeping it out avoids any background noise
+// during test runs entirely.
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<ScheduledPlaidSyncService>();
+}
 
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
