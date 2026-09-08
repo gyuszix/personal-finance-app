@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
+using PersonalFinance.Api.Hubs;
 using PersonalFinance.Api.Middleware;
 using PersonalFinance.Api.Services;
 using Scalar.AspNetCore;
@@ -21,6 +22,7 @@ builder.Services.AddPlaidIntegration(builder.Configuration);
 builder.Services.AddApiVersioningSetup();
 builder.Services.AddRateLimitingSetup(builder.Environment);
 builder.Services.AddSummaryCaching();
+builder.Services.AddRealtimeUpdates();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -77,6 +79,8 @@ apiV1.MapAuthEndpoints();
 apiV1.MapPlaidEndpoints();
 apiV1.MapTransactionEndpoints();
 apiV1.MapAccountEndpoints();
+
+app.MapHub<TransactionsHub>("/hubs/transactions");
 
 if (app.Environment.IsDevelopment())
 {

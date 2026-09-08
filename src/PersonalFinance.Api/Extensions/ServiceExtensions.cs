@@ -71,6 +71,25 @@ public static class ServiceExtensions
                 IssuerSigningKey = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(config["Jwt:Key"]!))
             };
+
+            // SignalR clients can't easily set a custom Authorization header on
+            // the WebSocket handshake, so accept the token via query string
+            // specifically for hub connections (?access_token=...). Everything
+            // else still needs a real Authorization: Bearer header.
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var accessToken = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(accessToken) &&
+                        context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    {
+                        context.Token = accessToken;
+                    }
+
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         services.AddAuthorization(options =>
@@ -142,6 +161,14 @@ public static class ServiceExtensions
 
     private static string GetClientIp(HttpContext context) =>
         context.Connection.RemoteIpAddress?.ToString() ?? IPAddress.None.ToString();
+
+    public static IServiceCollection AddRealtimeUpdates(this IServiceCollection services)
+    {
+        services.AddSignalR();
+        services.AddSingleton<SyncNotifier>();
+
+        return services;
+    }
 
     public static IServiceCollection AddPlaidIntegration(this IServiceCollection services, IConfiguration config)
     {

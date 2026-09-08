@@ -39,6 +39,7 @@ public class ScheduledPlaidSyncService(
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var syncService = scope.ServiceProvider.GetRequiredService<PlaidSyncService>();
         var summaryCache = scope.ServiceProvider.GetRequiredService<SummaryCache>();
+        var syncNotifier = scope.ServiceProvider.GetRequiredService<SyncNotifier>();
 
         // No HttpContext here, so AppDbContext's per-user query filter
         // (_currentUserId, derived from IHttpContextAccessor) naturally
@@ -46,14 +47,21 @@ public class ScheduledPlaidSyncService(
         // so this already returns every account across every user, no
         // IgnoreQueryFilters() needed.
         var accounts = await db.Accounts.ToListAsync(stoppingToken);
-        var affectedUsers = new HashSet<string>();
+
+        // Aggregate counts per user, same shape the manual sync endpoint
+        // reports, so both notify connected clients identically.
+        var totalsByUser = new Dictionary<string, (int Added, int Modified, int Removed)>();
 
         foreach (var account in accounts)
         {
             try
             {
-                await syncService.SyncAccountAsync(account);
-                affectedUsers.Add(account.UserId);
+                var (added, modified, removed) = await syncService.SyncAccountAsync(account);
+                var current = totalsByUser.GetValueOrDefault(account.UserId);
+                totalsByUser[account.UserId] = (
+                    current.Added + added,
+                    current.Modified + modified,
+                    current.Removed + removed);
             }
             catch (Exception ex)
             {
@@ -61,13 +69,14 @@ public class ScheduledPlaidSyncService(
             }
         }
 
-        foreach (var userId in affectedUsers)
+        foreach (var (userId, totals) in totalsByUser)
         {
             summaryCache.InvalidateForUser(userId);
+            await syncNotifier.NotifySyncCompletedAsync(userId, totals.Added, totals.Modified, totals.Removed);
         }
 
         logger.LogInformation(
             "Scheduled sync completed: {AccountCount} accounts across {UserCount} users",
-            accounts.Count, affectedUsers.Count);
+            accounts.Count, totalsByUser.Count);
     }
 }
