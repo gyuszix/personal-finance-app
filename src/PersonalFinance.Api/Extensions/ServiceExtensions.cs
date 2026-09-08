@@ -158,4 +158,12 @@ public static class ServiceExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddSummaryCaching(this IServiceCollection services)
+    {
+        services.AddMemoryCache();
+        services.AddSingleton<SummaryCache>();
+
+        return services;
+    }
 }
