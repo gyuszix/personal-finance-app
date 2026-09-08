@@ -192,6 +192,7 @@ public static class TransactionEndpoints
             AppDbContext db,
             UserManager<User> userManager,
             SummaryCache summaryCache,
+            SyncNotifier syncNotifier,
             HttpContext http) =>
         {
             var userId = userManager.GetUserId(http.User);
@@ -211,6 +212,9 @@ public static class TransactionEndpoints
             // Balances/transactions just changed - cached summaries for this
             // user are now stale.
             summaryCache.InvalidateForUser(userId);
+
+            // Let any connected client know without them having to poll.
+            await syncNotifier.NotifySyncCompletedAsync(userId, totalAdded, totalModified, totalRemoved);
 
             return Results.Ok(new { added = totalAdded, modified = totalModified, removed = totalRemoved });
         }).RequireAuthorization();
