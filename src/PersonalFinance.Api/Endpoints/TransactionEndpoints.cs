@@ -73,6 +73,7 @@ public static class TransactionEndpoints
             string? month,
             AppDbContext db,
             UserManager<User> userManager,
+            SummaryCache summaryCache,
             HttpContext http,
             ILogger<Program> logger) =>
         {
@@ -85,6 +86,15 @@ public static class TransactionEndpoints
                 {
                     ["month"] = ["month must be in yyyy-MM format, e.g. 2026-09"]
                 });
+            }
+
+            var cacheKey = summaryCache.TransactionsSummaryKey(userId, periodStart);
+            if (summaryCache.TryGet<List<TransactionSummaryResponse>>(cacheKey, out var cached))
+            {
+                logger.LogInformation(
+                    "Returned spend summary for user {UserId}, period {PeriodStart:yyyy-MM} from cache",
+                    userId, periodStart);
+                return Results.Ok(cached);
             }
 
             var periodEnd = periodStart.AddMonths(1);
@@ -105,6 +115,7 @@ public static class TransactionEndpoints
                 "Returned spend summary for user {UserId}, period {PeriodStart:yyyy-MM}, {CategoryCount} categories",
                 userId, periodStart, summary.Count);
 
+            summaryCache.Set(cacheKey, summary);
             return Results.Ok(summary);
         }).RequireAuthorization();
 
@@ -118,6 +129,7 @@ public static class TransactionEndpoints
             string? month,
             AppDbContext db,
             UserManager<User> userManager,
+            SummaryCache summaryCache,
             HttpContext http,
             ILogger<Program> logger) =>
         {
@@ -130,6 +142,15 @@ public static class TransactionEndpoints
                 {
                     ["month"] = ["month must be in yyyy-MM format, e.g. 2026-09"]
                 });
+            }
+
+            var cacheKey = summaryCache.CashflowKey(userId, periodStart);
+            if (summaryCache.TryGet<CashflowResponse>(cacheKey, out var cached))
+            {
+                logger.LogInformation(
+                    "Returned cash flow for user {UserId}, period {PeriodStart:yyyy-MM} from cache",
+                    userId, periodStart);
+                return Results.Ok(cached);
             }
 
             var periodEnd = periodStart.AddMonths(1);
@@ -155,18 +176,22 @@ public static class TransactionEndpoints
                 "Returned cash flow for user {UserId}, period {PeriodStart:yyyy-MM}: income {Income}, expenses {Expenses}",
                 userId, periodStart, income, expenses);
 
-            return Results.Ok(new CashflowResponse
+            var response = new CashflowResponse
             {
                 Income = income,
                 Expenses = expenses,
                 Net = income - expenses
-            });
+            };
+
+            summaryCache.Set(cacheKey, response);
+            return Results.Ok(response);
         }).RequireAuthorization();
 
         app.MapPost("/transactions/sync", async (
             PlaidSyncService syncService,
             AppDbContext db,
             UserManager<User> userManager,
+            SummaryCache summaryCache,
             HttpContext http) =>
         {
             var userId = userManager.GetUserId(http.User);
@@ -182,6 +207,10 @@ public static class TransactionEndpoints
                 totalModified += modified;
                 totalRemoved += removed;
             }
+
+            // Balances/transactions just changed - cached summaries for this
+            // user are now stale.
+            summaryCache.InvalidateForUser(userId);
 
             return Results.Ok(new { added = totalAdded, modified = totalModified, removed = totalRemoved });
         }).RequireAuthorization();

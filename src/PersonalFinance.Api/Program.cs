@@ -19,6 +19,7 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddPlaidIntegration(builder.Configuration);
 builder.Services.AddApiVersioningSetup();
 builder.Services.AddRateLimitingSetup(builder.Environment);
+builder.Services.AddSummaryCaching();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 

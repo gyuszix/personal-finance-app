@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
+using PersonalFinance.Api.Services;
 using PersonalFinance.Shared.DTOs;
 
 namespace PersonalFinance.Api.Endpoints;
@@ -15,11 +16,19 @@ public static class AccountEndpoints
         app.MapGet("/accounts/summary", async (
             AppDbContext db,
             UserManager<User> userManager,
+            SummaryCache summaryCache,
             HttpContext http,
             ILogger<Program> logger) =>
         {
             var userId = userManager.GetUserId(http.User);
             if (userId == null) return Results.Unauthorized();
+
+            var cacheKey = summaryCache.AccountsSummaryKey(userId);
+            if (summaryCache.TryGet<AccountsSummaryResponse>(cacheKey, out var cached))
+            {
+                logger.LogInformation("Returned accounts summary for user {UserId} from cache", userId);
+                return Results.Ok(cached);
+            }
 
             var accounts = await db.Accounts.ToListAsync();
 
@@ -46,14 +55,17 @@ public static class AccountEndpoints
                 "Returned accounts summary for user {UserId}: {AccountCount} accounts, netWorth {NetWorth}",
                 userId, accountResponses.Count, totalAssets - totalLiabilities);
 
-            return Results.Ok(new AccountsSummaryResponse
+            var response = new AccountsSummaryResponse
             {
                 TotalBalance = accountResponses.Sum(a => a.Balance),
                 TotalAssets = totalAssets,
                 TotalLiabilities = totalLiabilities,
                 NetWorth = totalAssets - totalLiabilities,
                 Accounts = accountResponses
-            });
+            };
+
+            summaryCache.Set(cacheKey, response);
+            return Results.Ok(response);
         }).RequireAuthorization();
     }
 
