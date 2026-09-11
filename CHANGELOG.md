@@ -10,6 +10,11 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 
 ## [Unreleased]
 
+### Added
+- CI workflow (`.github/workflows/ci.yml`) building/testing the API on
+  push/PR to `main`, with Plaid sandbox credentials wired in from GitHub
+  Actions repo secrets instead of ever being hardcoded
+
 ## [0.2.0] - 2026-09-08
 
 Backend hardening/scaling pass - the four items on the "someday" backlog,

@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Only the API/Shared/Tests projects are built here - the MAUI `App`
+# project needs mobile workloads (android/ios/maccatalyst) that aren't
+# installed on this runner, and isn't exercised by the test suite.
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore src/PersonalFinance.Tests/PersonalFinance.Tests.csproj
+
+      - name: Build
+        run: dotnet build src/PersonalFinance.Tests/PersonalFinance.Tests.csproj --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test src/PersonalFinance.Tests/PersonalFinance.Tests.csproj --no-build --configuration Release
+        env:
+          # Sourced from repo secrets (Settings > Secrets and variables > Actions),
+          # never committed. Double-underscore maps to nested config keys, i.e.
+          # Plaid__ClientId -> "Plaid:ClientId" (same keys set locally via
+          # `dotnet user-secrets`). Not required by today's tests - they don't
+          # call Plaid's API - but any future test that does will pick these up
+          # automatically through standard .NET config binding.
+          Plaid__ClientId: ${{ secrets.PLAID_CLIENT_ID }}
+          Plaid__Secret: ${{ secrets.PLAID_SECRET }}
+          Plaid__Environment: sandbox

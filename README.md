@@ -55,6 +55,32 @@ Then apply migrations: `dotnet ef database update --project src/PersonalFinance.
 
 For realistic test data without seeding anything yourself, see [`docs/PLAID_SANDBOX.md`](docs/PLAID_SANDBOX.md).
 
+## CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds and runs the
+test suite (`PersonalFinance.Tests`, which pulls in `Api` and `Shared`) on
+every push/PR to `main`. The MAUI `App` project is intentionally excluded -
+it needs mobile workloads the runner doesn't have and isn't covered by tests.
+
+Plaid credentials are passed into the workflow as env vars sourced from
+[repository secrets](https://github.com/gyuszix/personal-finance-app/settings/secrets/actions),
+the same way `dotnet user-secrets` works locally:
+
+```bash
+gh secret set PLAID_CLIENT_ID
+gh secret set PLAID_SECRET
+```
+
+(or add/rotate them via the Settings link above). Today's tests don't
+actually call Plaid, so this isn't load-bearing yet - it's wiring for
+whenever an integration test does, so nothing ever needs hardcoding.
+
+Since this repo is public: secrets are **not** exposed to workflow runs
+triggered by `pull_request` from a fork - that's a deliberate GitHub
+protection, not a bug, and not something to work around by switching to
+`pull_request_target` with a fork checkout (that combination is the classic
+way public repos leak secrets to a malicious PR).
+
 ## Further docs
 
 - [`CHANGELOG.md`](CHANGELOG.md) — what shipped, by version
