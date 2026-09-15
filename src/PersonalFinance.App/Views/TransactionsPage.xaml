@@ -13,18 +13,25 @@
                                         Command="{Binding LoadTransactionsCommand}" />
     </ContentPage.Behaviors>
 
-    <Grid RowDefinitions="Auto, Auto, *">
+    <Grid RowDefinitions="Auto, Auto, Auto, *">
 
         <Picker Grid.Row="0"
                 Title="Category"
                 ItemsSource="{Binding Categories}"
                 SelectedItem="{Binding SelectedCategory}" />
 
-        <ActivityIndicator Grid.Row="1"
+        <Label Grid.Row="1"
+               Text="{Binding OfflineStatusText}"
+               IsVisible="{Binding IsOffline}"
+               BackgroundColor="#FFF3CD"
+               TextColor="#664D03"
+               Padding="10,6" />
+
+        <ActivityIndicator Grid.Row="2"
                            IsRunning="{Binding IsLoading}"
                            IsVisible="{Binding IsLoading}" />
 
-        <CollectionView Grid.Row="2"
+        <CollectionView Grid.Row="3"
                         ItemsSource="{Binding Transactions}"
                         RemainingItemsThreshold="5"
                         RemainingItemsThresholdReachedCommand="{Binding LoadMoreTransactionsCommand}">

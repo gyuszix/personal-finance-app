@@ -12,11 +12,13 @@ public partial class TransactionsViewModel : ObservableObject
     private const int PageSize = 50;
 
     private readonly ApiService _apiService;
+    private readonly TransactionCacheService _cacheService;
     private int _currentPage;
 
-    public TransactionsViewModel(ApiService apiService)
+    public TransactionsViewModel(ApiService apiService, TransactionCacheService cacheService)
     {
         _apiService = apiService;
+        _cacheService = cacheService;
     }
 
     [ObservableProperty]
@@ -40,6 +42,12 @@ public partial class TransactionsViewModel : ObservableObject
     [ObservableProperty]
     private string errorMessage = string.Empty;
 
+    [ObservableProperty]
+    private bool isOffline;
+
+    [ObservableProperty]
+    private string offlineStatusText = string.Empty;
+
     // Reloads from page 1 whenever the filter changes - the category picker
     // is the only thing that should reset pagination state.
     partial void OnSelectedCategoryChanged(string value) => _ = LoadFirstPageAsync();
@@ -55,13 +63,36 @@ public partial class TransactionsViewModel : ObservableObject
     {
         IsLoading = true;
         ErrorMessage = string.Empty;
+        IsOffline = false;
         _currentPage = 1;
 
         var category = SelectedCategory == AllCategoriesOption ? null : SelectedCategory;
-        var result = await _apiService.GetTransactionsAsync(_currentPage, PageSize, category);
 
-        Transactions = new ObservableCollection<TransactionResponse>(result.Items);
-        HasMore = result.HasMore;
+        try
+        {
+            var result = await _apiService.GetTransactionsAsync(_currentPage, PageSize, category);
+            Transactions = new ObservableCollection<TransactionResponse>(result.Items);
+            HasMore = result.HasMore;
+
+            // Only the unfiltered first page is cached - it's the most useful
+            // "last known" snapshot to fall back to when offline.
+            if (category == null)
+            {
+                await _cacheService.ReplaceTransactionsAsync(result.Items);
+            }
+        }
+        catch (Exception)
+        {
+            var cached = await _cacheService.GetCachedTransactionsAsync();
+            var lastSyncedAt = await _cacheService.GetLastSyncedAtAsync();
+
+            Transactions = new ObservableCollection<TransactionResponse>(cached);
+            HasMore = false;
+            IsOffline = true;
+            OfflineStatusText = lastSyncedAt.HasValue
+                ? $"Offline - showing transactions from {lastSyncedAt.Value.ToLocalTime():g}"
+                : "Offline - no cached transactions available";
+        }
 
         IsLoading = false;
     }
@@ -85,9 +116,15 @@ public partial class TransactionsViewModel : ObservableObject
 
     private async Task LoadCategoriesAsync()
     {
-        var summary = await _apiService.GetTransactionSummaryAsync();
-
-        Categories = new ObservableCollection<string>(
-            new[] { AllCategoriesOption }.Concat(summary.Select(s => s.Category)));
+        try
+        {
+            var summary = await _apiService.GetTransactionSummaryAsync();
+            Categories = new ObservableCollection<string>(
+                new[] { AllCategoriesOption }.Concat(summary.Select(s => s.Category)));
+        }
+        catch (Exception)
+        {
+            // Offline - the filter picker just keeps whatever categories it already had.
+        }
     }
 }

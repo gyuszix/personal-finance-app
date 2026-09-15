@@ -26,6 +26,9 @@ public static class MauiProgram
         // Plaid Link - stub until #32/#33 land a real native implementation
         builder.Services.AddTransient<IPlaidLinkService, PlaidLinkServiceStub>();
 
+        // Offline transaction cache
+        builder.Services.AddSingleton<TransactionCacheService>();
+
         // ViewModels
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<TransactionsViewModel>();
