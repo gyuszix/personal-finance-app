@@ -2,13 +2,66 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PersonalFinance.App.ViewModels"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              x:Class="PersonalFinance.App.Views.DashboardPage"
              x:DataType="vm:DashboardViewModel"
              Title="Dashboard">
 
-    <VerticalStackLayout Padding="30" Spacing="20" VerticalOptions="Center">
-        <Label Text="Dashboard" Style="{StaticResource Headline}" />
-        <Label Text="Coming soon" HorizontalOptions="Center" />
-    </VerticalStackLayout>
+    <ContentPage.Behaviors>
+        <toolkit:EventToCommandBehavior EventName="Appearing"
+                                        Command="{Binding LoadDashboardCommand}" />
+    </ContentPage.Behaviors>
+
+    <Grid RowDefinitions="Auto, *">
+
+        <ActivityIndicator Grid.Row="0"
+                           IsRunning="{Binding IsLoading}"
+                           IsVisible="{Binding IsLoading}" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20" Spacing="24">
+
+                <Label Text="{Binding ErrorMessage}"
+                       TextColor="Red"
+                       IsVisible="{Binding HasError}" />
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Net Worth" Style="{StaticResource Headline}" />
+                    <Label Text="{Binding NetWorth, StringFormat='{0:C}'}" FontSize="32" />
+                </VerticalStackLayout>
+
+                <Grid ColumnDefinitions="*, *" ColumnSpacing="16">
+                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                        <Label Text="Total Assets" FontAttributes="Bold" />
+                        <Label Text="{Binding TotalAssets, StringFormat='{0:C}'}" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                        <Label Text="Total Liabilities" FontAttributes="Bold" />
+                        <Label Text="{Binding TotalLiabilities, StringFormat='{0:C}'}" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="This Month" Style="{StaticResource Headline}" />
+                    <Grid ColumnDefinitions="*, *, *" ColumnSpacing="16">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Income" FontAttributes="Bold" />
+                            <Label Text="{Binding Income, StringFormat='{0:C}'}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Expenses" FontAttributes="Bold" />
+                            <Label Text="{Binding Expenses, StringFormat='{0:C}'}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="Net" FontAttributes="Bold" />
+                            <Label Text="{Binding Net, StringFormat='{0:C}'}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
 
 </ContentPage>

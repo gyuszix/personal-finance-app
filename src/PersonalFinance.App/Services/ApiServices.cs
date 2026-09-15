@@ -85,6 +85,24 @@ public class ApiService
         return result ?? [];
     }
 
+    // GET /api/v1/accounts/summary
+    public async Task<AccountsSummaryResponse?> GetAccountsSummaryAsync()
+    {
+        var response = await _http.GetAsync("/api/v1/accounts/summary");
+        if (!response.IsSuccessStatusCode) return null;
+
+        return await response.Content.ReadFromJsonAsync<AccountsSummaryResponse>();
+    }
+
+    // GET /api/v1/transactions/cashflow - current month
+    public async Task<CashflowResponse?> GetCashflowAsync()
+    {
+        var response = await _http.GetAsync("/api/v1/transactions/cashflow");
+        if (!response.IsSuccessStatusCode) return null;
+
+        return await response.Content.ReadFromJsonAsync<CashflowResponse>();
+    }
+
     // GET /api/v1/plaid/link-token
     public async Task<string?> GetLinkTokenAsync()
     {
