@@ -25,6 +25,13 @@ public class ApiService
             new AuthenticationHeaderValue("Bearer", token);
     }
 
+    // Drops the JWT so subsequent requests go out unauthenticated
+    public void Logout()
+    {
+        _token = null;
+        _http.DefaultRequestHeaders.Authorization = null;
+    }
+
     // POST /api/v1/auth/login
     public async Task<string?> LoginAsync(string email, string password)
     {

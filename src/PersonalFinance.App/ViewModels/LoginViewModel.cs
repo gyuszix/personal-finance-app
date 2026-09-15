@@ -37,8 +37,8 @@ public partial class LoginViewModel : ObservableObject
 
         if (token != null)
         {
-            // Navigate to transactions page on success
-            await Shell.Current.GoToAsync("//transactions");
+            // Navigate into the tabbed main app on success
+            await Shell.Current.GoToAsync("//dashboard");
         }
         else
         {
