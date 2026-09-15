@@ -13,14 +13,21 @@
                                         Command="{Binding LoadTransactionsCommand}" />
     </ContentPage.Behaviors>
 
-    <Grid RowDefinitions="Auto, *">
+    <Grid RowDefinitions="Auto, Auto, *">
 
-        <ActivityIndicator Grid.Row="0"
+        <Picker Grid.Row="0"
+                Title="Category"
+                ItemsSource="{Binding Categories}"
+                SelectedItem="{Binding SelectedCategory}" />
+
+        <ActivityIndicator Grid.Row="1"
                            IsRunning="{Binding IsLoading}"
                            IsVisible="{Binding IsLoading}" />
 
-        <CollectionView Grid.Row="1"
-                        ItemsSource="{Binding Transactions}">
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding Transactions}"
+                        RemainingItemsThreshold="5"
+                        RemainingItemsThresholdReachedCommand="{Binding LoadMoreTransactionsCommand}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="dto:TransactionResponse">
                     <Grid Padding="15" ColumnDefinitions="*, Auto">
@@ -29,6 +36,10 @@
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
+            <CollectionView.Footer>
+                <ActivityIndicator IsRunning="{Binding IsLoadingMore}"
+                                   IsVisible="{Binding IsLoadingMore}" />
+            </CollectionView.Footer>
         </CollectionView>
 
     </Grid>

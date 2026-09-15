@@ -60,16 +60,29 @@ public class ApiService
         return response.IsSuccessStatusCode;
     }
 
-    // GET /api/v1/transactions - pageSize is large enough to keep today's
-    // "load everything at once" UI behavior; proper infinite-scroll paging
-    // is GUI work, not covered here
-    public async Task<List<TransactionResponse>> GetTransactionsAsync()
+    // GET /api/v1/transactions
+    public async Task<PagedResult<TransactionResponse>> GetTransactionsAsync(
+        int page = 1, int pageSize = 50, string? category = null)
     {
-        var response = await _http.GetAsync("/api/v1/transactions?pageSize=200");
-        if (!response.IsSuccessStatusCode) return [];
+        var query = $"/api/v1/transactions?page={page}&pageSize={pageSize}";
+        if (!string.IsNullOrEmpty(category)) query += $"&category={Uri.EscapeDataString(category)}";
+
+        var response = await _http.GetAsync(query);
+        if (!response.IsSuccessStatusCode) return new PagedResult<TransactionResponse>();
 
         var result = await response.Content.ReadFromJsonAsync<PagedResult<TransactionResponse>>();
-        return result?.Items ?? [];
+        return result ?? new PagedResult<TransactionResponse>();
+    }
+
+    // GET /api/v1/transactions/summary - used to populate the category filter
+    // with categories the user actually has transactions in
+    public async Task<List<TransactionSummaryResponse>> GetTransactionSummaryAsync()
+    {
+        var response = await _http.GetAsync("/api/v1/transactions/summary");
+        if (!response.IsSuccessStatusCode) return [];
+
+        var result = await response.Content.ReadFromJsonAsync<List<TransactionSummaryResponse>>();
+        return result ?? [];
     }
 
     // GET /api/v1/plaid/link-token
