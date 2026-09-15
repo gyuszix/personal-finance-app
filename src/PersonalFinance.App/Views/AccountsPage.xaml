@@ -10,6 +10,17 @@
         <Label Text="Accounts" Style="{StaticResource Headline}" />
         <Label Text="Coming soon" HorizontalOptions="Center" />
 
+        <Button Text="Connect a bank"
+                Command="{Binding ConnectBankCommand}"
+                IsEnabled="{Binding CanConnectBank}" />
+
+        <ActivityIndicator IsRunning="{Binding IsConnectingBank}"
+                           IsVisible="{Binding IsConnectingBank}" />
+
+        <Label Text="{Binding ConnectBankStatus}"
+               HorizontalOptions="Center"
+               IsVisible="{Binding HasConnectBankStatus}" />
+
         <Button Text="Log out"
                 Command="{Binding LogoutCommand}" />
     </VerticalStackLayout>

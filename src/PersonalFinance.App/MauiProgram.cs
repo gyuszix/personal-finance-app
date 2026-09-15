@@ -23,6 +23,9 @@ public static class MauiProgram
         // API client
         builder.Services.AddSingleton<ApiService>();
 
+        // Plaid Link - stub until #32/#33 land a real native implementation
+        builder.Services.AddTransient<IPlaidLinkService, PlaidLinkServiceStub>();
+
         // ViewModels
         builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<TransactionsViewModel>();
