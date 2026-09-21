@@ -35,7 +35,7 @@ public static class PlaidEndpoints
 
             var response = await plaid.LinkTokenCreateAsync(request);
 
-            return Results.Ok(new { link_token = response.LinkToken });
+            return Results.Ok(new { linkToken = response.LinkToken });
         }).RequireAuthorization();
 
         app.MapPost("/plaid/exchange-token", async (
@@ -56,6 +56,8 @@ public static class PlaidEndpoints
 
             // Real access token - only used to call Plaid, never persisted as-is
             var accessToken = exchangeResponse.AccessToken;
+            if (string.IsNullOrEmpty(accessToken))
+                return Results.BadRequest("Plaid rejected the public token - it may be invalid or already exchanged.");
 
             var accountsResponse = await plaid.AccountsGetAsync(new AccountsGetRequest
             {

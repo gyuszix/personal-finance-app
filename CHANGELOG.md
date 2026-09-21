@@ -15,6 +15,24 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   push/PR to `main`, with Plaid sandbox credentials wired in from GitHub
   Actions repo secrets instead of ever being hardcoded
 
+### Fixed
+- Dashboard/Transactions tabs never loaded data in the running MAUI app -
+  the `Appearing`-bound `EventToCommandBehavior` never fired inside a Shell
+  `TabBar`. Replaced with an `OnAppearing()` override that calls the load
+  command directly, and added global `AppDomain`/`TaskScheduler` unhandled
+  exception logging, since this failure mode produced zero console output
+  and no error banner
+- `GET /plaid/link-token` returned `link_token` (snake_case) while the MAUI
+  client deserialized into `LinkToken` (camelCase) - the field never bound,
+  silently breaking "Connect a bank" with "Couldn't start bank connection.
+  Please try again."
+- `POST /plaid/exchange-token` crashed with an unhandled
+  `ArgumentNullException` whenever Plaid rejected the public token (e.g. a
+  stub/simulated token); now returns `400 Bad Request` instead
+- "Connect a bank" now triggers `POST /transactions/sync` immediately after
+  linking, instead of relying on the up-to-30-minute background sync job to
+  pick up newly linked accounts
+
 ## [0.2.0] - 2026-09-08
 
 Backend hardening/scaling pass - the four items on the "someday" backlog,

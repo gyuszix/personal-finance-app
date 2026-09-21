@@ -67,6 +67,10 @@ public partial class AccountsViewModel : ObservableObject
             return;
         }
 
+        // Kick off a sync right away so transactions show up immediately
+        // instead of waiting for the up-to-30-minute background sync.
+        await _apiService.SyncTransactionsAsync();
+
         SetStatus("Bank connected!");
         await Shell.Current.GoToAsync("//dashboard");
     }

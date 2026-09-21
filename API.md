@@ -81,7 +81,7 @@ Returns a Plaid Link token. The client passes this to Plaid Link's SDK to open t
 
 **Response**
 ```json
-{ "link_token": "..." }
+{ "linkToken": "..." }
 ```
 
 ### `POST /api/v1/plaid/exchange-token`

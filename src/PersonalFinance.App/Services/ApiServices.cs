@@ -123,6 +123,13 @@ public class ApiService
 
         return response.IsSuccessStatusCode;
     }
+
+    // POST /api/v1/transactions/sync
+    public async Task<bool> SyncTransactionsAsync()
+    {
+        var response = await _http.PostAsync("/api/v1/transactions/sync", null);
+        return response.IsSuccessStatusCode;
+    }
 }
 
 // Response shapes for deserializing API responses
