@@ -18,6 +18,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   restores the session on launch instead of always starting at login;
   a 401 now triggers a silent refresh-and-retry instead of logging the
   user out
+- Real "Connect a bank" flow - `PlaidLinkWebService` hosts Plaid's Link
+  web SDK in a `WebView` and replaces the old action-sheet stub, so
+  linking a bank now works from the app itself on every platform
 
 ### Fixed
 - Dashboard/Transactions tabs never loaded data in the running MAUI app -

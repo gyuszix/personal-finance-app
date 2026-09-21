@@ -23,8 +23,8 @@ public static class MauiProgram
         // API client
         builder.Services.AddSingleton<ApiService>();
 
-        // Plaid Link - stub until #32/#33 land a real native implementation
-        builder.Services.AddTransient<IPlaidLinkService, PlaidLinkServiceStub>();
+        // Plaid Link - WebView-based today, #32/#33 may swap in native SDKs later
+        builder.Services.AddTransient<IPlaidLinkService, PlaidLinkWebService>();
 
         // Offline transaction cache
         builder.Services.AddSingleton<TransactionCacheService>();
