@@ -35,6 +35,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   repeated per method; `ApiService` is a thin façade over the typed
   client so ViewModels didn't need to change
 
+### Changed
+- Registering now signs the user straight in instead of sending them
+  back to the login page to re-type the same credentials
+
 ### Fixed
 - App crashed on every launch right after the Refit switch -
   `AddRefitClient` defaults to a reflection-based request builder that
