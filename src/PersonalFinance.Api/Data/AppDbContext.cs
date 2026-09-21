@@ -27,5 +27,6 @@ public class AppDbContext : IdentityDbContext<User>
 
         modelBuilder.Entity<Account>().HasQueryFilter(a => _currentUserId == null || a.UserId == _currentUserId);
 
+        modelBuilder.Entity<Account>().HasIndex(a => a.PlaidAccountId).IsUnique();
     }
 }

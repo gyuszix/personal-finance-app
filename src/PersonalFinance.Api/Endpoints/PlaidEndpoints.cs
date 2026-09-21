@@ -4,6 +4,7 @@ using Going.Plaid.Entity;
 using Going.Plaid.Item;
 using Going.Plaid.Accounts;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Services;
@@ -66,19 +67,30 @@ public static class PlaidEndpoints
 
             var protectedAccessToken = protector.Protect(accessToken);
 
+            var plaidAccountIds = accountsResponse.Accounts.Select(a => a.AccountId).ToList();
+            var existingAccounts = await db.Accounts
+                .Where(a => plaidAccountIds.Contains(a.PlaidAccountId))
+                .ToDictionaryAsync(a => a.PlaidAccountId);
+
             foreach (var plaidAccount in accountsResponse.Accounts)
             {
-                var account = new PersonalFinance.Api.Entities.Account
+                if (existingAccounts.TryGetValue(plaidAccount.AccountId, out var account))
                 {
-                    UserId = userId,
-                    PlaidAccessToken = protectedAccessToken,
-                    PlaidAccountId = plaidAccount.AccountId,
-                    BankName = accountsResponse.Item.InstitutionId ?? "Unknown",
-                    AccountType = plaidAccount.Type.ToString(),
-                    Balance = plaidAccount.Balances.Current ?? 0
-                };
-
-                db.Accounts.Add(account);
+                    account.PlaidAccessToken = protectedAccessToken;
+                    account.Balance = plaidAccount.Balances.Current ?? 0;
+                }
+                else
+                {
+                    db.Accounts.Add(new PersonalFinance.Api.Entities.Account
+                    {
+                        UserId = userId,
+                        PlaidAccessToken = protectedAccessToken,
+                        PlaidAccountId = plaidAccount.AccountId,
+                        BankName = accountsResponse.Item.InstitutionId ?? "Unknown",
+                        AccountType = plaidAccount.Type.ToString(),
+                        Balance = plaidAccount.Balances.Current ?? 0
+                    });
+                }
             }
 
             await db.SaveChangesAsync();

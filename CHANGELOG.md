@@ -32,6 +32,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 - "Connect a bank" now triggers `POST /transactions/sync` immediately after
   linking, instead of relying on the up-to-30-minute background sync job to
   pick up newly linked accounts
+- Re-linking an already-connected Item created duplicate `Account` rows -
+  `/plaid/exchange-token` now upserts by `PlaidAccountId`, backed by a
+  unique index (migration also cleans up any duplicates already sitting in
+  a dev database)
 
 ## [0.2.0] - 2026-09-08
 
