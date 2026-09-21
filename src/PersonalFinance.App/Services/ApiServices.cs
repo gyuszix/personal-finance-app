@@ -26,8 +26,17 @@ public class ApiService
     // there's nothing stored - caller should send the user to the login page.
     public async Task<bool> TryRestoreSessionAsync()
     {
-        var token = await SecureStorage.Default.GetAsync(AccessTokenKey);
-        var refreshToken = await SecureStorage.Default.GetAsync(RefreshTokenKey);
+        string? token, refreshToken;
+        try
+        {
+            token = await SecureStorage.Default.GetAsync(AccessTokenKey);
+            refreshToken = await SecureStorage.Default.GetAsync(RefreshTokenKey);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SecureStorage] Failed to restore session: {ex}");
+            return false;
+        }
 
         if (token == null || refreshToken == null) return false;
 
@@ -41,8 +50,18 @@ public class ApiService
         _refreshToken = refreshToken;
         _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
-        await SecureStorage.Default.SetAsync(AccessTokenKey, token);
-        await SecureStorage.Default.SetAsync(RefreshTokenKey, refreshToken);
+        try
+        {
+            await SecureStorage.Default.SetAsync(AccessTokenKey, token);
+            await SecureStorage.Default.SetAsync(RefreshTokenKey, refreshToken);
+        }
+        catch (Exception ex)
+        {
+            // Keychain/keystore access can fail depending on platform signing
+            // and entitlements. The session still works for this run - it
+            // just won't survive a restart.
+            System.Diagnostics.Debug.WriteLine($"[SecureStorage] Failed to persist session: {ex}");
+        }
     }
 
     // Revokes the refresh token server-side (best-effort) and drops the local session

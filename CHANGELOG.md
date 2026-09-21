@@ -21,6 +21,12 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 - Real "Connect a bank" flow - `PlaidLinkWebService` hosts Plaid's Link
   web SDK in a `WebView` and replaces the old action-sheet stub, so
   linking a bank now works from the app itself on every platform
+- Login hung indefinitely on Mac Catalyst - `SecureStorage` (Keychain)
+  access failed under App Sandbox without a `keychain-access-groups`
+  entitlement, throwing mid-login before the loading spinner ever
+  cleared. Sandbox is off for local dev until proper entitlements/signing
+  are set up, and session persistence now degrades gracefully instead of
+  taking the whole login down if Keychain access ever fails again
 
 ### Fixed
 - Dashboard/Transactions tabs never loaded data in the running MAUI app -
