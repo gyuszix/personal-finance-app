@@ -28,6 +28,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   are set up, and session persistence now degrades gracefully instead of
   taking the whole login down if Keychain access ever fails again
 
+### Changed
+- MAUI networking layer switched from hand-rolled `HttpClient` calls to
+  a Refit-generated `IPersonalFinanceApi` client. Token attachment and
+  refresh-on-401 now live in one `AuthRefreshHandler` instead of being
+  repeated per method; `ApiService` is a thin façade over the typed
+  client so ViewModels didn't need to change
+
 ### Fixed
 - Dashboard/Transactions tabs never loaded data in the running MAUI app -
   the `Appearing`-bound `EventToCommandBehavior` never fired inside a Shell

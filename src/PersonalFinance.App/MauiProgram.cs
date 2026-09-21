@@ -1,8 +1,10 @@
-﻿using CommunityToolkit.Maui;
+﻿using System.Text.Json;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.App.Services;
 using PersonalFinance.App.ViewModels;
 using PersonalFinance.App.Views;
+using Refit;
 
 namespace PersonalFinance.App;
 
@@ -20,7 +22,24 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        // API client
+        // API client - Refit-generated, with a handler that attaches the
+        // bearer token and transparently refreshes it on a 401
+        var refitSettings = new RefitSettings
+        {
+            ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                PropertyNameCaseInsensitive = true
+            })
+        };
+
+        builder.Services.AddSingleton<AuthTokenProvider>();
+        builder.Services.AddTransient<AuthRefreshHandler>();
+        builder.Services
+            .AddRefitClient<IPersonalFinanceApi>(refitSettings)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(ApiConfig.BaseUrl))
+            .AddHttpMessageHandler<AuthRefreshHandler>();
+
         builder.Services.AddSingleton<ApiService>();
 
         // Plaid Link - WebView-based today, #32/#33 may swap in native SDKs later
