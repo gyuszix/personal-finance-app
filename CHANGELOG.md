@@ -36,6 +36,14 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   client so ViewModels didn't need to change
 
 ### Fixed
+- App crashed on every launch right after the Refit switch -
+  `AddRefitClient` defaults to a reflection-based request builder that
+  isn't installed/AOT-safe on Mac Catalyst, throwing
+  `NotSupportedException` the moment the typed client was first
+  resolved. Switched to `AddRefitGeneratedClient`, which uses the
+  compile-time source-generated implementation instead
+
+### Fixed
 - Dashboard/Transactions tabs never loaded data in the running MAUI app -
   the `Appearing`-bound `EventToCommandBehavior` never fired inside a Shell
   `TabBar`. Replaced with an `OnAppearing()` override that calls the load

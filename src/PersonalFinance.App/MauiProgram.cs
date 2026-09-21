@@ -23,7 +23,12 @@ public static class MauiProgram
             });
 
         // API client - Refit-generated, with a handler that attaches the
-        // bearer token and transparently refreshes it on a 401
+        // bearer token and transparently refreshes it on a 401.
+        // AddRefitGeneratedClient (not AddRefitClient) is required here - the
+        // plain reflection-based request builder AddRefitClient defaults to
+        // isn't installed/AOT-safe and crashes at first resolution on Mac
+        // Catalyst; the generated variant uses the compile-time source
+        // generator's implementation instead.
         var refitSettings = new RefitSettings
         {
             ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions
@@ -36,7 +41,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<AuthTokenProvider>();
         builder.Services.AddTransient<AuthRefreshHandler>();
         builder.Services
-            .AddRefitClient<IPersonalFinanceApi>(refitSettings)
+            .AddRefitGeneratedClient<IPersonalFinanceApi>(refitSettings)
             .ConfigureHttpClient(c => c.BaseAddress = new Uri(ApiConfig.BaseUrl))
             .AddHttpMessageHandler<AuthRefreshHandler>();
 
