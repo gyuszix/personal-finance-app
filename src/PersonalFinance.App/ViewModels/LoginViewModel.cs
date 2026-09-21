@@ -47,4 +47,10 @@ public partial class LoginViewModel : ObservableObject
 
         IsLoading = false;
     }
+
+    [RelayCommand]
+    private async Task GoToRegisterAsync()
+    {
+        await Shell.Current.GoToAsync("//register");
+    }
 }

@@ -38,6 +38,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ### Changed
 - Registering now signs the user straight in instead of sending them
   back to the login page to re-type the same credentials
+- Login page has a Register button - the register route existed but
+  was only reachable by navigating to it directly, nothing in the UI
+  linked to it
 
 ### Fixed
 - App crashed on every launch right after the Refit switch -
