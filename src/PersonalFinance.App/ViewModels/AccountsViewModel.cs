@@ -86,7 +86,7 @@ public partial class AccountsViewModel : ObservableObject
     [RelayCommand]
     private async Task LogoutAsync()
     {
-        _apiService.Logout();
+        await _apiService.LogoutAsync();
         await Shell.Current.GoToAsync("//login");
     }
 }

@@ -14,6 +14,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 - CI workflow (`.github/workflows/ci.yml`) building/testing the API on
   push/PR to `main`, with Plaid sandbox credentials wired in from GitHub
   Actions repo secrets instead of ever being hardcoded
+- MAUI app persists the access/refresh token pair in `SecureStorage` and
+  restores the session on launch instead of always starting at login;
+  a 401 now triggers a silent refresh-and-retry instead of logging the
+  user out
 
 ### Fixed
 - Dashboard/Transactions tabs never loaded data in the running MAUI app -

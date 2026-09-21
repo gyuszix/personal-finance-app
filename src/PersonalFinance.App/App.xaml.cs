@@ -1,10 +1,15 @@
-﻿namespace PersonalFinance.App;
+﻿using PersonalFinance.App.Services;
+
+namespace PersonalFinance.App;
 
 public partial class App : Application
 {
-	public App()
+	private readonly ApiService _apiService;
+
+	public App(ApiService apiService)
 	{
 		InitializeComponent();
+		_apiService = apiService;
 
 		AppDomain.CurrentDomain.UnhandledException += (_, e) =>
 			System.Diagnostics.Debug.WriteLine($"[UnhandledException] {e.ExceptionObject}");
@@ -18,6 +23,16 @@ public partial class App : Application
 
 	protected override Window CreateWindow(IActivationState? activationState)
 	{
-		return new Window(new AppShell());
+		var shell = new AppShell();
+
+		// If a session was persisted from a previous run, skip straight past
+		// the login page instead of always starting there.
+		shell.Loaded += async (_, _) =>
+		{
+			if (await _apiService.TryRestoreSessionAsync())
+				await shell.GoToAsync("//dashboard");
+		};
+
+		return new Window(shell);
 	}
 }
