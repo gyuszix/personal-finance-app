@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "/Users/gyuszix/.local/bin/postgres-mcp",
+      "args": [
+        "--access-mode",
+        "restricted"
+      ],
+      "env": {
+        "DATABASE_URI": "postgresql://claude_ro@localhost:5432/personalfinance"
+      }
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  }
+}
