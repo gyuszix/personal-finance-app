@@ -7,12 +7,18 @@
              x:DataType="vm:TransactionsViewModel"
              Title="Transactions">
 
-    <Grid RowDefinitions="Auto, Auto, Auto, *">
+    <Grid RowDefinitions="Auto, Auto, Auto, Auto, *">
 
-        <Picker Grid.Row="0"
-                Title="Category"
-                ItemsSource="{Binding Categories}"
-                SelectedItem="{Binding SelectedCategory}" />
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Padding="15,12,15,0" ColumnSpacing="12">
+            <Picker Grid.Column="0"
+                    Title="Category"
+                    ItemsSource="{Binding Categories}"
+                    SelectedItem="{Binding SelectedCategory}" />
+            <Button Grid.Column="1"
+                    Text="Refresh"
+                    Command="{Binding LoadTransactionsCommand}"
+                    IsEnabled="{Binding IsNotLoading}" />
+        </Grid>
 
         <Label Grid.Row="1"
                Text="{Binding OfflineStatusText}"
@@ -21,19 +27,46 @@
                TextColor="#664D03"
                Padding="10,6" />
 
-        <ActivityIndicator Grid.Row="2"
+        <Label Grid.Row="2"
+               Text="{Binding ErrorMessage}"
+               IsVisible="{Binding HasError}"
+               TextColor="Red"
+               Padding="15,6" />
+
+        <ActivityIndicator Grid.Row="3"
                            IsRunning="{Binding IsLoading}"
                            IsVisible="{Binding IsLoading}" />
 
-        <CollectionView Grid.Row="3"
+        <Label Grid.Row="4"
+               Text="{Binding EmptyMessage}"
+               IsVisible="{Binding IsEmpty}"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               HorizontalTextAlignment="Center"
+               Padding="30" />
+
+        <CollectionView Grid.Row="4"
+                        IsVisible="{Binding HasTransactions}"
                         ItemsSource="{Binding Transactions}"
                         RemainingItemsThreshold="5"
                         RemainingItemsThresholdReachedCommand="{Binding LoadMoreTransactionsCommand}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="dto:TransactionResponse">
-                    <Grid Padding="15" ColumnDefinitions="*, Auto">
-                        <Label Grid.Column="0" Text="{Binding Description}" />
-                        <Label Grid.Column="1" Text="{Binding Amount, StringFormat='{0:C}'}" />
+                    <Grid Padding="15,12" ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="{Binding Description}" />
+                            <Label Text="{Binding CategoryPrimary}"
+                                   FontSize="12"
+                                   TextColor="Gray" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                            <Label Text="{Binding Amount, StringFormat='{0:C}'}"
+                                   HorizontalTextAlignment="End" />
+                            <Label Text="{Binding Date, StringFormat='{0:d}'}"
+                                   FontSize="12"
+                                   TextColor="Gray"
+                                   HorizontalTextAlignment="End" />
+                        </VerticalStackLayout>
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
