@@ -11,6 +11,25 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Accounts tab lists the user's linked accounts (bank name, account type,
+  balance) instead of a "Coming soon" placeholder, read from the
+  per-account breakdown `/accounts/summary` was already returning (#39)
+- Explicit Refresh button on Dashboard, Transactions and Accounts. Nothing
+  in the app could be reloaded without navigating away and back, so a
+  transient failure was a dead end and newly synced data never appeared.
+  macOS is the first target platform and pull-to-refresh isn't a desktop
+  gesture, hence a visible button rather than a `RefreshView` (#45)
+- Transaction rows show date and category alongside description and
+  amount - both were already on `TransactionResponse` and returned by the
+  API, just never bound (#46)
+- Empty/first-run states on Dashboard, Transactions and Accounts. A user
+  with nothing linked previously saw a wall of `$0.00` (indistinguishable
+  from a failed load) and a blank transaction list, with nothing pointing
+  at "Connect a bank" (#47, #39)
+- Transactions page displays `ErrorMessage`, which the ViewModel had been
+  setting all along with no Label bound to it - errors on that page were
+  silently invisible (#48)
+
 - CI workflow (`.github/workflows/ci.yml`) building/testing the API on
   push/PR to `main`, with Plaid sandbox credentials wired in from GitHub
   Actions repo secrets instead of ever being hardcoded
@@ -29,6 +48,14 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- `ApiConfig.BaseUrl` reads from the `PERSONALFINANCE_API_URL` environment
+  variable, falling back to `http://localhost:5140`. Was a `const`, so the
+  endpoint couldn't change without a rebuild and the value was inlined into
+  every consuming assembly at compile time (#50)
+- Dashboard's load-failure message no longer tells the user to "pull to
+  refresh" - the app has never implemented that gesture (#45)
+
+### Changed
 - MAUI networking layer switched from hand-rolled `HttpClient` calls to
   a Refit-generated `IPersonalFinanceApi` client. Token attachment and
   refresh-on-401 now live in one `AuthRefreshHandler` instead of being
@@ -43,6 +70,11 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- Losing connectivity mid-scroll on Transactions stranded `IsLoadingMore`
+  as `true`. Because the method's own guard checks that flag, paging was
+  then blocked for the rest of the session and the footer spinner spun
+  forever. The call is now wrapped in try/catch with the flag reset in a
+  `finally`, and the failure is surfaced to the user (#49)
 - App crashed on every launch right after the Refit switch -
   `AddRefitClient` defaults to a reflection-based request builder that
   isn't installed/AOT-safe on Mac Catalyst, throwing
