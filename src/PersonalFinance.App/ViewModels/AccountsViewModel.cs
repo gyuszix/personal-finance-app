@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PersonalFinance.App.Services;
+using PersonalFinance.Shared.DTOs;
+using System.Collections.ObjectModel;
 
 namespace PersonalFinance.App.ViewModels;
 
@@ -16,6 +18,31 @@ public partial class AccountsViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    private ObservableCollection<AccountResponse> accounts = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotLoading))]
+    private bool isLoading;
+
+    // Lets the Refresh button disable itself mid-load without needing a
+    // negating value converter.
+    public bool IsNotLoading => !IsLoading;
+
+    [ObservableProperty]
+    private string errorMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool hasError;
+
+    [ObservableProperty]
+    private bool isEmpty;
+
+    // Explicit inverse of IsEmpty so the list and the empty-state message can
+    // never both be visible in the row they share.
+    [ObservableProperty]
+    private bool hasAccounts;
+
+    [ObservableProperty]
     private bool isConnectingBank;
 
     [ObservableProperty]
@@ -26,6 +53,34 @@ public partial class AccountsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool hasConnectBankStatus;
+
+    // The per-account breakdown already comes back on /accounts/summary
+    // alongside the aggregates the Dashboard uses - no new endpoint needed.
+    [RelayCommand]
+    public async Task LoadAccountsAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = string.Empty;
+        HasError = false;
+
+        var summary = await _apiService.GetAccountsSummaryAsync();
+
+        if (summary == null)
+        {
+            ErrorMessage = "Couldn't load your accounts. Tap Refresh to try again.";
+            HasError = true;
+            IsEmpty = false;
+            HasAccounts = false;
+        }
+        else
+        {
+            Accounts = new ObservableCollection<AccountResponse>(summary.Accounts);
+            IsEmpty = Accounts.Count == 0;
+            HasAccounts = !IsEmpty;
+        }
+
+        IsLoading = false;
+    }
 
     [RelayCommand]
     private async Task ConnectBankAsync()
@@ -70,6 +125,10 @@ public partial class AccountsViewModel : ObservableObject
         // Kick off a sync right away so transactions show up immediately
         // instead of waiting for the up-to-30-minute background sync.
         await _apiService.SyncTransactionsAsync();
+
+        // Pull the newly linked accounts into the list behind the user before
+        // we navigate away, so coming back to this tab shows them already.
+        await LoadAccountsAsync();
 
         SetStatus("Bank connected!");
         await Shell.Current.GoToAsync("//dashboard");

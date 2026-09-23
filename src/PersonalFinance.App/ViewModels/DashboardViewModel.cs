@@ -14,13 +14,26 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotLoading))]
     private bool isLoading;
+
+    // Lets the Refresh button disable itself mid-load without needing a
+    // negating value converter.
+    public bool IsNotLoading => !IsLoading;
 
     [ObservableProperty]
     private string errorMessage = string.Empty;
 
     [ObservableProperty]
     private bool hasError;
+
+    // A user with no linked accounts would otherwise just see a wall of
+    // $0.00, which is indistinguishable from a failed load.
+    [ObservableProperty]
+    private bool hasNoAccounts;
+
+    [ObservableProperty]
+    private bool hasAccounts;
 
     [ObservableProperty]
     private decimal netWorth;
@@ -56,8 +69,10 @@ public partial class DashboardViewModel : ObservableObject
 
         if (summary == null || cashflow == null)
         {
-            ErrorMessage = "Couldn't load dashboard data. Pull to refresh to try again.";
+            ErrorMessage = "Couldn't load dashboard data. Tap Refresh to try again.";
             HasError = true;
+            HasNoAccounts = false;
+            HasAccounts = false;
         }
         else
         {
@@ -67,8 +82,17 @@ public partial class DashboardViewModel : ObservableObject
             Income = cashflow.Income;
             Expenses = cashflow.Expenses;
             Net = cashflow.Net;
+
+            HasNoAccounts = summary.Accounts.Count == 0;
+            HasAccounts = !HasNoAccounts;
         }
 
         IsLoading = false;
+    }
+
+    [RelayCommand]
+    private async Task GoToAccountsAsync()
+    {
+        await Shell.Current.GoToAsync("//accounts");
     }
 }
