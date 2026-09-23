@@ -55,6 +55,17 @@ Then apply migrations: `dotnet ef database update --project src/PersonalFinance.
 
 For realistic test data without seeding anything yourself, see [`docs/PLAID_SANDBOX.md`](docs/PLAID_SANDBOX.md).
 
+### Pointing the app at a different API
+
+The MAUI app defaults to `http://localhost:5140`. To target another API
+without rebuilding, set `PERSONALFINANCE_API_URL` before launching:
+
+```bash
+PERSONALFINANCE_API_URL="https://api.example.com" dotnet build src/PersonalFinance.App -f net10.0-maccatalyst -t:Run
+```
+
+Unset or empty falls back to the local default.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds and runs the
