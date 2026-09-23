@@ -70,6 +70,14 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- Transactions tab fetched page 1 twice on every load. Rebuilding the
+  category list replaced the `Categories` collection, which reset the
+  bound Picker's selection and fired the filter-changed handler - so a
+  fire-and-forget page-1 load raced the one `LoadTransactionsAsync` was
+  already about to start, with both writing `Transactions`, `IsLoading`
+  and `_currentPage`. The rebuild no longer counts as a filter change,
+  and the user's active filter survives a refresh instead of being
+  silently reset (#51)
 - Losing connectivity mid-scroll on Transactions stranded `IsLoadingMore`
   as `true`. Because the method's own guard checks that flag, paging was
   then blocked for the rest of the session and the footer spinner spun

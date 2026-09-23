@@ -14,6 +14,7 @@ public partial class TransactionsViewModel : ObservableObject
     private readonly ApiService _apiService;
     private readonly TransactionCacheService _cacheService;
     private int _currentPage;
+    private bool _suppressCategoryReload;
 
     public TransactionsViewModel(ApiService apiService, TransactionCacheService cacheService)
     {
@@ -69,12 +70,38 @@ public partial class TransactionsViewModel : ObservableObject
 
     // Reloads from page 1 whenever the filter changes - the category picker
     // is the only thing that should reset pagination state.
-    partial void OnSelectedCategoryChanged(string value) => _ = LoadFirstPageAsync();
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        // Rebuilding the Categories collection resets the bound Picker's
+        // selection, which lands here too. Without this guard that counts as
+        // a filter change and kicks off a second, concurrent page-1 load
+        // racing the one LoadTransactionsAsync is about to start.
+        if (_suppressCategoryReload) return;
+
+        _ = LoadFirstPageAsync();
+    }
 
     [RelayCommand]
     public async Task LoadTransactionsAsync()
     {
-        await LoadCategoriesAsync();
+        var previousCategory = SelectedCategory;
+
+        _suppressCategoryReload = true;
+        try
+        {
+            await LoadCategoriesAsync();
+
+            // Replacing the collection clears the Picker, so put the user's
+            // filter back rather than silently resetting it on every refresh.
+            SelectedCategory = previousCategory is not null && Categories.Contains(previousCategory)
+                ? previousCategory
+                : AllCategoriesOption;
+        }
+        finally
+        {
+            _suppressCategoryReload = false;
+        }
+
         await LoadFirstPageAsync();
     }
 
