@@ -35,10 +35,23 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
         return response.Content.Token;
     }
 
-    public async Task<bool> RegisterAsync(string email, string password)
+    public async Task<(bool Success, string? Error)> RegisterAsync(string email, string password)
     {
         var response = await api.RegisterAsync(new RegisterRequest(email, password));
-        return response.IsSuccessStatusCode;
+        if (response.IsSuccessStatusCode)
+            return (true, null);
+
+        List<IdentityErrorDto>? errors = null;
+        if (response.Error is Refit.ApiException apiException)
+        {
+            errors = await apiException.GetContentAsAsync<List<IdentityErrorDto>>();
+        }
+
+        var message = errors != null && errors.Count > 0
+            ? string.Join(" ", errors.Select(e => e.Description))
+            : "Registration failed.";
+
+        return (false, message);
     }
 
     public async Task<PagedResult<TransactionResponse>> GetTransactionsAsync(

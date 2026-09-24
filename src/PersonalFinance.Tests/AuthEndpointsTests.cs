@@ -146,4 +146,28 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     }
 
     private record TokenResponse(string Token, string RefreshToken);
+
+    [Fact]
+    public async Task Register_WithDuplicateEmail_ReturnsSpecificError()
+    {
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "duplicate@example.com",
+            password = "Test123!"
+        });
+
+        var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "duplicate@example.com",
+            password = "Test123!"
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var errors = await response.Content.ReadFromJsonAsync<List<IdentityErrorDto>>();
+        Assert.NotNull(errors);
+        Assert.Contains(errors!, e => e.Code == "DuplicateUserName");
+    }
+
+    private record IdentityErrorDto(string Code, string Description);
 }
