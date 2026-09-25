@@ -31,7 +31,7 @@ public partial class RegisterViewModel : ObservableObject
         IsLoading = true;
         ErrorMessage = string.Empty;
 
-        var success = await _apiService.RegisterAsync(Email, Password);
+        var (success, error) = await _apiService.RegisterAsync(Email, Password);
 
         if (success)
         {
@@ -45,7 +45,7 @@ public partial class RegisterViewModel : ObservableObject
         }
         else
         {
-            ErrorMessage = "Registration failed. Try a different email.";
+            ErrorMessage = error ?? "Registration failed.";
         }
 
         IsLoading = false;

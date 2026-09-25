@@ -47,3 +47,4 @@ public record ExchangeTokenRequest(string PublicToken);
 
 public record TokenResponse(string Token, string RefreshToken);
 public record LinkTokenResponse(string LinkToken);
+public record IdentityErrorDto(string Code, string Description);
