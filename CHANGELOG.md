@@ -11,6 +11,21 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Dashboard can step back through past months of cash flow; the
+  Transactions category filter offers every category the user has, not
+  just this month's, via the new `GET /transactions/categories` (#63)
+- Unlink a bank from the Accounts tab (`DELETE /accounts/{id}`): removes
+  the Plaid Item and every account it brought in, with their
+  transactions (#64)
+- App refreshes itself when the API pushes `SyncCompleted` over SignalR,
+  so the scheduled background sync shows up without tapping Refresh (#62)
+- `DataProtection:KeysPath` setting for where the keys encrypting stored
+  Plaid tokens live - required anywhere but a single dev machine (#57)
+- API logs which Postgres server it connected to on startup, so a native
+  Postgres silently shadowing the docker-compose one is visible (#42)
+- Integration tests for the transaction, account and sync endpoints,
+  per-user isolation, and the SignalR hub (#60)
+- CI fails on known-vulnerable NuGet packages and caches restores (#61)
 - Accounts tab lists the user's linked accounts (bank name, account type,
   balance) instead of a "Coming soon" placeholder, read from the
   per-account breakdown `/accounts/summary` was already returning (#39)
@@ -70,6 +85,16 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- Plaid sync ran once per account instead of once per Item, storing
+  every transaction once per account in its Item and inflating every
+  total. Rows already duplicated are not cleaned up yet - see #53 (#41)
+- Bank names show the institution's name instead of Plaid's raw
+  institution ID; existing accounts are fixed on their next sync (#40)
+- Two requests hitting an expired token at once both refreshed it,
+  tripping reuse detection and logging the user out (#54)
+- One failing bank connection no longer aborts a manual sync for the
+  others; the response lists `failedAccountIds` (#59)
+- Deleting a transaction now invalidates the cached summaries (#58)
 - Transactions tab fetched page 1 twice on every load. Rebuilding the
   category list replaced the `Categories` collection, which reset the
   bound Picker's selection and fired the filter-changed handler - so a
@@ -111,6 +136,15 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   `/plaid/exchange-token` now upserts by `PlaidAccountId`, backed by a
   unique index (migration also cleans up any duplicates already sitting in
   a dev database)
+
+### Security
+- Offline transaction cache is cleared on logout and sign-in - it
+  previously leaked one user's transactions to the next on the same
+  device (#55)
+- Per-user query filters fail closed: with no signed-in user they match
+  nothing instead of everything (#56)
+- App no longer ships SQLitePCLRaw 2.1.11's vulnerable native SQLite
+  (GHSA-2m69-gcr7-jv3q) (#66)
 
 ## [0.2.0] - 2026-09-08
 
