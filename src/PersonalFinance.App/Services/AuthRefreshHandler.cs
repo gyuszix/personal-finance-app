@@ -14,13 +14,18 @@ public class AuthRefreshHandler(AuthTokenProvider tokenProvider) : DelegatingHan
     protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        var sentAccessToken = tokenProvider.AccessToken;
         Attach(request);
         var response = await base.SendAsync(request, cancellationToken);
 
         if (response.StatusCode != HttpStatusCode.Unauthorized || tokenProvider.RefreshToken == null)
             return response;
 
-        if (!await TryRefreshAsync(cancellationToken)) return response;
+        // Goes through the provider so concurrent 401s share one refresh -
+        // two refreshes with the same token trip the server's reuse
+        // detection and revoke the whole session (#54).
+        if (!await tokenProvider.RefreshAsync(sentAccessToken, RequestRefreshAsync, cancellationToken))
+            return response;
 
         var retry = await CloneAsync(request);
         Attach(retry);
@@ -33,21 +38,17 @@ public class AuthRefreshHandler(AuthTokenProvider tokenProvider) : DelegatingHan
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenProvider.AccessToken);
     }
 
-    private async Task<bool> TryRefreshAsync(CancellationToken cancellationToken)
+    private static async Task<TokenResponse?> RequestRefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
         using var http = new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl) };
         var response = await http.PostAsJsonAsync(
             "/api/v1/auth/refresh",
-            new RefreshTokenRequest(tokenProvider.RefreshToken!),
+            new RefreshTokenRequest(refreshToken),
             cancellationToken);
 
-        if (!response.IsSuccessStatusCode) return false;
+        if (!response.IsSuccessStatusCode) return null;
 
-        var result = await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken);
-        if (result == null) return false;
-
-        await tokenProvider.SetSessionAsync(result.Token, result.RefreshToken);
-        return true;
+        return await response.Content.ReadFromJsonAsync<TokenResponse>(cancellationToken: cancellationToken);
     }
 
     private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage request)

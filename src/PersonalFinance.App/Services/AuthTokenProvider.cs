@@ -15,6 +15,38 @@ public class AuthTokenProvider
     public string? AccessToken { get; private set; }
     public string? RefreshToken { get; private set; }
 
+    private readonly SemaphoreSlim _refreshLock = new(1, 1);
+
+    // Refreshes the session at most once per expired access token, however
+    // many requests got a 401 for it at the same time. The server rotates the
+    // refresh token on use and treats a second use as theft - revoking every
+    // session for the user - so concurrent callers must share one refresh.
+    // rejectedAccessToken is the token the caller's request was sent with:
+    // if it's already been replaced, another caller refreshed while this one
+    // waited, and the caller can just retry with the new token.
+    public async Task<bool> RefreshAsync(
+        string? rejectedAccessToken,
+        Func<string, CancellationToken, Task<TokenResponse?>> requestRefresh,
+        CancellationToken cancellationToken)
+    {
+        await _refreshLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (AccessToken != null && AccessToken != rejectedAccessToken) return true;
+            if (RefreshToken == null) return false;
+
+            var result = await requestRefresh(RefreshToken, cancellationToken);
+            if (result == null) return false;
+
+            await SetSessionAsync(result.Token, result.RefreshToken);
+            return true;
+        }
+        finally
+        {
+            _refreshLock.Release();
+        }
+    }
+
     public async Task<bool> TryRestoreAsync()
     {
         string? token, refreshToken;
