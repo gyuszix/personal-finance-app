@@ -223,6 +223,7 @@ public static class TransactionEndpoints
             int id,
             AppDbContext db,
             IAuthorizationService authorizationService,
+            SummaryCache summaryCache,
             HttpContext http,
             ILogger<Program> logger) =>
         {
@@ -249,6 +250,9 @@ public static class TransactionEndpoints
 
             db.Transactions.Remove(transaction);
             await db.SaveChangesAsync();
+
+            // The owner's cached summaries/cashflow still count it otherwise.
+            summaryCache.InvalidateForUser(transaction.UserId);
 
             logger.LogInformation("Transaction {TransactionId} deleted", id);
 
