@@ -1,3 +1,4 @@
+using System.Globalization;
 using PersonalFinance.Shared.DTOs;
 
 namespace PersonalFinance.App.Services;
@@ -62,9 +63,9 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
     }
 
     // Used to populate the category filter with categories the user actually has transactions in
-    public async Task<List<TransactionSummaryResponse>> GetTransactionSummaryAsync()
+    public async Task<List<string>> GetCategoriesAsync()
     {
-        var response = await api.GetTransactionSummaryAsync();
+        var response = await api.GetCategoriesAsync();
         return response.Content ?? [];
     }
 
@@ -74,10 +75,10 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
         return response.Content;
     }
 
-    // Current month
-    public async Task<CashflowResponse?> GetCashflowAsync()
+    // Cash flow for the month containing `month` (current month if null)
+    public async Task<CashflowResponse?> GetCashflowAsync(DateTime? month = null)
     {
-        var response = await api.GetCashflowAsync();
+        var response = await api.GetCashflowAsync(month?.ToString("yyyy-MM", CultureInfo.InvariantCulture));
         return response.Content;
     }
 

@@ -119,6 +119,22 @@ public static class TransactionEndpoints
             return Results.Ok(summary);
         }).RequireAuthorization();
 
+        // Every category the user has transactions in, across all time - what
+        // the app's category filter offers. (/transactions/summary is per
+        // month, so building the filter from it hid older categories, and its
+        // "Uncategorized" bucket isn't a filterable value.)
+        app.MapGet("/transactions/categories", async (AppDbContext db) =>
+        {
+            var categories = await db.Transactions
+                .Where(t => t.CategoryPrimary != null)
+                .Select(t => t.CategoryPrimary!)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToListAsync();
+
+            return Results.Ok(categories);
+        }).RequireAuthorization();
+
         // Income vs. expense for a given month (same default/format as
         // /transactions/summary). Excludes pending transactions (same reason
         // as above) and transfer categories - TRANSFER_IN/TRANSFER_OUT are

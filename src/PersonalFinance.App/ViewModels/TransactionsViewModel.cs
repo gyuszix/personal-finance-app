@@ -199,9 +199,9 @@ public partial class TransactionsViewModel : ObservableObject
     {
         try
         {
-            var summary = await _apiService.GetTransactionSummaryAsync();
+            var categories = await _apiService.GetCategoriesAsync();
             Categories = new ObservableCollection<string>(
-                new[] { AllCategoriesOption }.Concat(summary.Select(s => s.Category)));
+                new[] { AllCategoriesOption }.Concat(categories));
         }
         catch (Exception)
         {
