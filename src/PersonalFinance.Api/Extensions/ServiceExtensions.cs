@@ -173,6 +173,7 @@ public static class ServiceExtensions
     public static IServiceCollection AddPlaidIntegration(this IServiceCollection services, IConfiguration config)
     {
         services.AddScoped<PlaidSyncService>();
+        services.AddScoped<PlaidInstitutionService>();
         services.Configure<PlaidOptions>(config.GetSection("Plaid"));
         services.AddHttpClient();
         services.AddSingleton<PlaidClient>(sp =>

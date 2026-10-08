@@ -7,7 +7,7 @@ using PersonalFinance.Api.Entities;
 
 namespace PersonalFinance.Api.Services;
 
-public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidSyncService> logger, PlaidTokenProtector protector)
+public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidSyncService> logger, PlaidTokenProtector protector, PlaidInstitutionService institutions)
 {
   // /transactions/sync is an Item-level Plaid call: one access token returns
   // the transactions for every account behind that bank connection. So
@@ -135,6 +135,15 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
 
     foreach (var account in itemAccounts)
       account.SyncCursor = cursor;
+
+    // Accounts linked before bank names were resolved still hold Plaid's
+    // raw institution ID - fix them up here, once per Item.
+    var rawInstitutionId = itemAccounts.Select(a => a.BankName).FirstOrDefault(PlaidInstitutionService.IsRawInstitutionId);
+    if (rawInstitutionId is not null && await institutions.GetNameAsync(rawInstitutionId) is { } bankName)
+    {
+      foreach (var account in itemAccounts.Where(a => a.BankName == rawInstitutionId))
+        account.BankName = bankName;
+    }
 
     await db.SaveChangesAsync();
 

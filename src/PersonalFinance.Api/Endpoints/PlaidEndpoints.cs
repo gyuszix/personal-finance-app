@@ -45,6 +45,7 @@ public static class PlaidEndpoints
             AppDbContext db,
             UserManager<User> userManager,
             PlaidTokenProtector protector,
+            PlaidInstitutionService institutions,
             HttpContext http) =>
         {
             var userId = userManager.GetUserId(http.User);
@@ -67,6 +68,9 @@ public static class PlaidEndpoints
 
             var protectedAccessToken = protector.Protect(accessToken);
 
+            var institutionId = accountsResponse.Item.InstitutionId;
+            var bankName = await institutions.GetNameAsync(institutionId) ?? institutionId ?? "Unknown";
+
             var plaidAccountIds = accountsResponse.Accounts.Select(a => a.AccountId).ToList();
             var existingAccounts = await db.Accounts
                 .Where(a => plaidAccountIds.Contains(a.PlaidAccountId))
@@ -77,6 +81,7 @@ public static class PlaidEndpoints
                 if (existingAccounts.TryGetValue(plaidAccount.AccountId, out var account))
                 {
                     account.PlaidAccessToken = protectedAccessToken;
+                    account.BankName = bankName;
                     account.Balance = plaidAccount.Balances.Current ?? 0;
                 }
                 else
@@ -86,7 +91,7 @@ public static class PlaidEndpoints
                         UserId = userId,
                         PlaidAccessToken = protectedAccessToken,
                         PlaidAccountId = plaidAccount.AccountId,
-                        BankName = accountsResponse.Item.InstitutionId ?? "Unknown",
+                        BankName = bankName,
                         AccountType = plaidAccount.Type.ToString(),
                         Balance = plaidAccount.Balances.Current ?? 0
                     });
