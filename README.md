@@ -82,6 +82,10 @@ Unset or empty falls back to the local default.
 test suite (`PersonalFinance.Tests`, which pulls in `Api` and `Shared`) on
 every push/PR to `main`. The MAUI `App` project is intentionally excluded -
 it needs mobile workloads the runner doesn't have and isn't covered by tests.
+The build also fails on any known-vulnerable NuGet package in that graph
+(`dotnet list package --vulnerable --include-transitive`); run the same
+command locally to check before pushing. NuGet packages are cached between
+runs, keyed on the project files.
 
 Plaid credentials are passed into the workflow as env vars sourced from
 [repository secrets](https://github.com/gyuszix/personal-finance-app/settings/secrets/actions),
