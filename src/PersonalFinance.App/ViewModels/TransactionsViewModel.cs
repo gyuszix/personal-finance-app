@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using PersonalFinance.App.Services;
 using PersonalFinance.Shared.DTOs;
 using System.Collections.ObjectModel;
@@ -20,6 +21,14 @@ public partial class TransactionsViewModel : ObservableObject
     {
         _apiService = apiService;
         _cacheService = cacheService;
+
+        // Only reload when transactions actually changed - reloading resets
+        // the list to page 1, which would yank a user who'd scrolled down.
+        WeakReferenceMessenger.Default.Register<TransactionsViewModel, SyncCompletedMessage>(this, (vm, message) =>
+        {
+            if (message.HasTransactionChanges)
+                MainThread.BeginInvokeOnMainThread(() => vm.LoadTransactionsCommand.Execute(null));
+        });
     }
 
     [ObservableProperty]

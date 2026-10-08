@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using PersonalFinance.App.Services;
 
 namespace PersonalFinance.App.ViewModels;
@@ -12,6 +13,10 @@ public partial class DashboardViewModel : ObservableObject
     public DashboardViewModel(ApiService apiService)
     {
         _apiService = apiService;
+
+        // A background sync landed - balances and cashflow may have moved.
+        WeakReferenceMessenger.Default.Register<DashboardViewModel, SyncCompletedMessage>(this,
+            (vm, _) => MainThread.BeginInvokeOnMainThread(() => vm.LoadDashboardCommand.Execute(null)));
     }
 
     [ObservableProperty]

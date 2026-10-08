@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
 using PersonalFinance.App.Services;
 using PersonalFinance.Shared.DTOs;
 using System.Collections.ObjectModel;
@@ -15,6 +16,10 @@ public partial class AccountsViewModel : ObservableObject
     {
         _apiService = apiService;
         _plaidLinkService = plaidLinkService;
+
+        // A background sync landed - balances may have moved.
+        WeakReferenceMessenger.Default.Register<AccountsViewModel, SyncCompletedMessage>(this,
+            (vm, _) => MainThread.BeginInvokeOnMainThread(() => vm.LoadAccountsCommand.Execute(null)));
     }
 
     [ObservableProperty]
