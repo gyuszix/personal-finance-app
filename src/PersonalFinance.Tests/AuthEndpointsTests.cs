@@ -148,6 +148,36 @@ public class AuthEndpointsTests : IClassFixture<TestWebApplicationFactory>
     private record TokenResponse(string Token, string RefreshToken);
 
     [Fact]
+    public async Task Revoke_StopsTheRefreshTokenWorking()
+    {
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            email = "revoke@example.com",
+            password = "Test123!"
+        });
+
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new
+        {
+            email = "revoke@example.com",
+            password = "Test123!"
+        });
+
+        var tokens = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
+
+        var revokeResponse = await _client.PostAsJsonAsync("/api/v1/auth/revoke", new
+        {
+            refreshToken = tokens!.RefreshToken
+        });
+        Assert.Equal(HttpStatusCode.NoContent, revokeResponse.StatusCode);
+
+        var refreshResponse = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        {
+            refreshToken = tokens.RefreshToken
+        });
+        Assert.Equal(HttpStatusCode.Unauthorized, refreshResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task Register_WithDuplicateEmail_ReturnsSpecificError()
     {
         await _client.PostAsJsonAsync("/api/v1/auth/register", new
