@@ -25,6 +25,35 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
     if (itemAccounts.Select(a => a.PlaidAccessToken).Distinct().Count() > 1)
       throw new ArgumentException("All accounts must belong to the same Plaid Item", nameof(itemAccounts));
 
+    try
+    {
+      return await SyncItemCoreAsync(itemAccounts);
+    }
+    catch
+    {
+      // Callers sync several Items on one DbContext and carry on past a
+      // failure, so drop anything this Item staged but never saved - or the
+      // next Item's SaveChangesAsync would persist it (half a page of
+      // transactions, a cursor that was never reached).
+      DiscardUnsavedChanges();
+      throw;
+    }
+  }
+
+  private void DiscardUnsavedChanges()
+  {
+    foreach (var entry in db.ChangeTracker.Entries().ToList())
+    {
+      if (entry.State == EntityState.Added)
+        entry.State = EntityState.Detached;
+      else if (entry.State is EntityState.Modified or EntityState.Deleted)
+        entry.State = EntityState.Unchanged;
+    }
+  }
+
+  private async Task<(int added, int modified, int removed)> SyncItemCoreAsync(IReadOnlyList<Account> itemAccounts)
+  {
+
     int added = 0, modified = 0, removed = 0;
     var accessToken = protector.Unprotect(itemAccounts[0].PlaidAccessToken);
     var accountsByPlaidId = itemAccounts.ToDictionary(a => a.PlaidAccountId);

@@ -193,20 +193,36 @@ public static class TransactionEndpoints
             UserManager<User> userManager,
             SummaryCache summaryCache,
             SyncNotifier syncNotifier,
-            HttpContext http) =>
+            HttpContext http,
+            ILogger<Program> logger) =>
         {
             var userId = userManager.GetUserId(http.User);
             if (userId == null) return Results.Unauthorized();
 
             var accounts = await db.Accounts.Where(a => a.UserId == userId).ToListAsync();
+            var items = PlaidSyncService.GroupByItem(accounts).ToList();
 
             int totalAdded = 0, totalModified = 0, totalRemoved = 0;
-            foreach (var itemAccounts in PlaidSyncService.GroupByItem(accounts))
+            var failedAccountIds = new List<int>();
+
+            // One broken bank connection (e.g. ITEM_LOGIN_REQUIRED, or a token
+            // that no longer decrypts) mustn't stop the user's other banks
+            // syncing - same as the scheduled job (#59).
+            foreach (var itemAccounts in items)
             {
-                var (added, modified, removed) = await syncService.SyncItemAsync(itemAccounts);
-                totalAdded += added;
-                totalModified += modified;
-                totalRemoved += removed;
+                try
+                {
+                    var (added, modified, removed) = await syncService.SyncItemAsync(itemAccounts);
+                    totalAdded += added;
+                    totalModified += modified;
+                    totalRemoved += removed;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Manual sync failed for Plaid Item with accounts {AccountIds}",
+                        itemAccounts.Select(a => a.AccountId));
+                    failedAccountIds.AddRange(itemAccounts.Select(a => a.AccountId));
+                }
             }
 
             // Balances/transactions just changed - cached summaries for this
@@ -216,7 +232,13 @@ public static class TransactionEndpoints
             // Let any connected client know without them having to poll.
             await syncNotifier.NotifySyncCompletedAsync(userId, totalAdded, totalModified, totalRemoved);
 
-            return Results.Ok(new { added = totalAdded, modified = totalModified, removed = totalRemoved });
+            var result = new SyncResponse(totalAdded, totalModified, totalRemoved, failedAccountIds);
+
+            // Partial success is still success; only fail when nothing synced.
+            var allFailed = items.Count > 0 && failedAccountIds.Count == accounts.Count;
+            return allFailed
+                ? Results.Json(result, statusCode: StatusCodes.Status502BadGateway)
+                : Results.Ok(result);
         }).RequireAuthorization();
 
         app.MapDelete("/transactions/{id}", async (
@@ -285,3 +307,5 @@ public static class TransactionEndpoints
         return false;
     }
 }
+
+public record SyncResponse(int Added, int Modified, int Removed, List<int> FailedAccountIds);

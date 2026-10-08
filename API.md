@@ -159,12 +159,16 @@ Income vs. expense for a month. Excludes pending transactions and internal trans
 
 ### `POST /api/v1/transactions/sync`
 
-Triggers a Plaid cursor-based sync for every account the user has linked, plus a balance refresh for each. Idempotent to call repeatedly - each account's cursor picks up only what changed since last sync.
+Triggers a Plaid cursor-based sync for every bank connection (Plaid Item) the user has linked, plus a balance refresh for each of its accounts. Idempotent to call repeatedly - each Item's cursor picks up only what changed since last sync.
+
+A connection that fails (e.g. the bank needs the user to sign in again) doesn't stop the others; its accounts are listed in `failedAccountIds`.
 
 **Response**
 ```json
-{ "added": 686, "modified": 0, "removed": 0 }
+{ "added": 686, "modified": 0, "removed": 0, "failedAccountIds": [] }
 ```
+- `200 OK` — everything synced, or at least one connection did (check `failedAccountIds`)
+- `502 Bad Gateway` — same body; every connection failed
 
 ### `DELETE /api/v1/transactions/{id}`
 

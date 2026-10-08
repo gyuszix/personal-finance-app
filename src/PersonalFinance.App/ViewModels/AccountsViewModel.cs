@@ -124,13 +124,17 @@ public partial class AccountsViewModel : ObservableObject
 
         // Kick off a sync right away so transactions show up immediately
         // instead of waiting for the up-to-30-minute background sync.
-        await _apiService.SyncTransactionsAsync();
+        var synced = await _apiService.SyncTransactionsAsync();
 
         // Pull the newly linked accounts into the list behind the user before
         // we navigate away, so coming back to this tab shows them already.
         await LoadAccountsAsync();
 
-        SetStatus("Bank connected!");
+        // Linking worked either way; a failed sync just means transactions
+        // arrive with the next scheduled sync instead of right now.
+        SetStatus(synced
+            ? "Bank connected!"
+            : "Bank connected! Transactions will appear after the next sync.");
         await Shell.Current.GoToAsync("//dashboard");
     }
 
