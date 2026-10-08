@@ -209,6 +209,15 @@ Balances overview: total balance, assets/liabilities split, net worth, and a per
 ```
 `classification` is derived from Plaid's account type: `Depository`/`Investment` → `Asset`, `Credit`/`Loan` → `Liability`, anything else → `Other` (excluded from `totalAssets`/`totalLiabilities`/`netWorth`). `netWorth = totalAssets - totalLiabilities`.
 
+### `DELETE /api/v1/accounts/{id}`
+
+Unlinks the bank connection behind the account: removes the Plaid Item (`/item/remove`) and deletes **every** account that came from that connection, plus their transactions. Plaid can only remove a whole Item, so there's no unlinking a single account of a multi-account bank.
+
+**Response**
+- `204 No Content`
+- `404 Not Found` — no such account for this user
+- `502 Bad Gateway` — Plaid refused to remove the Item; nothing was deleted, safe to retry
+
 ## Error shape
 
 Anything not documented above with a specific shape returns [RFC 7807](https://www.rfc-editor.org/rfc/rfc7807) `ProblemDetails` on failure, e.g.:
