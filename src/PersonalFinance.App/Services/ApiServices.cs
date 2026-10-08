@@ -2,7 +2,7 @@ using PersonalFinance.Shared.DTOs;
 
 namespace PersonalFinance.App.Services;
 
-public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider)
+public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider, TransactionCacheService cacheService)
 {
     // Loads a previously persisted session on app startup. Returns false if
     // there's nothing stored - caller should send the user to the login page.
@@ -24,6 +24,7 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
         }
 
         tokenProvider.Clear();
+        await cacheService.ClearAsync();
     }
 
     public async Task<string?> LoginAsync(string email, string password)
@@ -31,6 +32,9 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
         var response = await api.LoginAsync(new LoginRequest(email, password));
         if (!response.IsSuccessStatusCode || response.Content == null) return null;
 
+        // A fresh sign-in may be a different user than whoever filled the
+        // offline cache (e.g. after their session expired without a logout).
+        await cacheService.ClearAsync();
         await tokenProvider.SetSessionAsync(response.Content.Token, response.Content.RefreshToken);
         return response.Content.Token;
     }

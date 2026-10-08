@@ -61,6 +61,20 @@ public class TransactionCacheService
         }).ToList();
     }
 
+    // The cache isn't keyed by user, so it must not outlive the session that
+    // filled it - otherwise the next user to sign in on this device sees the
+    // previous user's transactions whenever they're offline (#55).
+    public async Task ClearAsync()
+    {
+        await EnsureTablesCreatedAsync();
+
+        await _db.RunInTransactionAsync(conn =>
+        {
+            conn.DeleteAll<CachedTransaction>();
+            conn.DeleteAll<CacheMetadata>();
+        });
+    }
+
     public async Task<DateTime?> GetLastSyncedAtAsync()
     {
         await EnsureTablesCreatedAsync();
