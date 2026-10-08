@@ -76,6 +76,23 @@ PERSONALFINANCE_API_URL="https://api.example.com" dotnet build src/PersonalFinan
 
 Unset or empty falls back to the local default.
 
+### Running the API anywhere but your own machine
+
+Stored Plaid access tokens are encrypted with ASP.NET Core Data
+Protection. By default its keys live in `~/.aspnet/DataProtection-Keys`,
+which is fine locally but is lost with a container and isn't shared
+between instances - and without the keys, every stored token stops
+decrypting and every sync fails until each bank is re-linked. Point it at
+a persistent directory every instance can read:
+
+```bash
+DataProtection__KeysPath=/var/lib/personalfinance/keys
+```
+
+The key files aren't encrypted at rest - protect that directory like the
+database. Don't change the app's content root/application name without a
+plan either: that also makes existing tokens unreadable.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds and runs the

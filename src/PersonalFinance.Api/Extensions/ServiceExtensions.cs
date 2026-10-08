@@ -2,6 +2,8 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
@@ -184,7 +186,24 @@ public static class ServiceExtensions
             var options = sp.GetRequiredService<IOptions<PlaidOptions>>();
             return new PlaidClient(options);
         });
+        // Data Protection encrypts the stored Plaid access tokens, so its key
+        // ring must outlive the process and be shared by every instance -
+        // lose it and every token stops decrypting (#57). The framework
+        // default (~/.aspnet/DataProtection-Keys) is fine on a dev machine;
+        // a container or multi-instance host should set DataProtection:KeysPath
+        // to a persistent, shared directory.
+        // Read when options are built, not here, so configuration added after
+        // registration (e.g. by WebApplicationFactory) is honoured too.
         services.AddDataProtection();
+        services.AddOptions<KeyManagementOptions>()
+            .Configure<IConfiguration, ILoggerFactory>((options, configuration, loggerFactory) =>
+            {
+                var keysPath = configuration["DataProtection:KeysPath"];
+                if (!string.IsNullOrEmpty(keysPath))
+                {
+                    options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(keysPath), loggerFactory);
+                }
+            });
         services.AddSingleton<PlaidTokenProtector>();
 
         return services;
