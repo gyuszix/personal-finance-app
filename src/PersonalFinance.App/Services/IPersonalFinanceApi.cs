@@ -36,6 +36,9 @@ public interface IPersonalFinanceApi
     [Post("/api/v1/plaid/exchange-token")]
     Task<IApiResponse> ExchangeTokenAsync([Body] ExchangeTokenRequest request);
 
+    [Delete("/api/v1/accounts/{accountId}")]
+    Task<IApiResponse> UnlinkAccountAsync(int accountId);
+
     [Post("/api/v1/transactions/sync")]
     Task<IApiResponse> SyncTransactionsAsync();
 }

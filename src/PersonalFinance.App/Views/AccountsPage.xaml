@@ -43,7 +43,7 @@
                         ItemsSource="{Binding Accounts}">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="dto:AccountResponse">
-                    <Grid Padding="20,12" ColumnDefinitions="*, Auto" ColumnSpacing="12">
+                    <Grid Padding="20,12" ColumnDefinitions="*, Auto, Auto" ColumnSpacing="12">
                         <VerticalStackLayout Grid.Column="0" Spacing="2">
                             <Label Text="{Binding BankName}" />
                             <Label Text="{Binding AccountType}"
@@ -53,6 +53,11 @@
                         <Label Grid.Column="1"
                                Text="{Binding Balance, StringFormat='{0:C}'}"
                                VerticalOptions="Center" />
+                        <Button Grid.Column="2"
+                                Text="Unlink"
+                                VerticalOptions="Center"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AccountsViewModel}}, Path=UnlinkAccountCommand, x:DataType=vm:AccountsViewModel}"
+                                CommandParameter="{Binding .}" />
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

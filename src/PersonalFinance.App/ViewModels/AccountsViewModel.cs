@@ -143,6 +143,28 @@ public partial class AccountsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task UnlinkAccountAsync(AccountResponse account)
+    {
+        // Plaid can only disconnect a whole bank connection, so be explicit
+        // that sibling accounts from the same bank go too.
+        var confirmed = await Shell.Current.DisplayAlertAsync(
+            $"Unlink {account.BankName}?",
+            "This disconnects the bank and removes every account it brought in, along with their transactions. You can connect it again later.",
+            "Unlink",
+            "Cancel");
+        if (!confirmed) return;
+
+        if (!await _apiService.UnlinkAccountAsync(account.AccountId))
+        {
+            ErrorMessage = $"Couldn't unlink {account.BankName}. Please try again.";
+            HasError = true;
+            return;
+        }
+
+        await LoadAccountsAsync();
+    }
+
+    [RelayCommand]
     private async Task LogoutAsync()
     {
         await _apiService.LogoutAsync();

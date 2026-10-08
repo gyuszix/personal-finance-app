@@ -93,6 +93,14 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
         return response.IsSuccessStatusCode;
     }
 
+    // Disconnects the bank behind this account - which removes every account
+    // that bank connection brought in, not just this one.
+    public async Task<bool> UnlinkAccountAsync(int accountId)
+    {
+        var response = await api.UnlinkAccountAsync(accountId);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> SyncTransactionsAsync()
     {
         var response = await api.SyncTransactionsAsync();
