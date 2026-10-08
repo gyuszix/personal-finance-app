@@ -33,7 +33,10 @@ public static class ServiceExtensions
             // its schema) would be thrown away the moment EnsureCreated() finished.
             // Instead we open a single connection here and keep it alive for the
             // whole app lifetime, then hand that same connection to every DbContext.
-            var connection = new SqliteConnection("DataSource=testdb;Mode=Memory;Cache=Shared");
+            // The name is unique per app instance: shared-cache memory DBs are
+            // process-wide by name, so test classes running in parallel (one
+            // factory each) would otherwise race to create the same schema.
+            var connection = new SqliteConnection($"DataSource=testdb-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
             connection.Open();
             services.AddSingleton(connection);
             services.AddDbContext<AppDbContext>(options => options.UseSqlite(connection));
