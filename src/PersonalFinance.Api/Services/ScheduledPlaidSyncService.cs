@@ -41,12 +41,9 @@ public class ScheduledPlaidSyncService(
         var summaryCache = scope.ServiceProvider.GetRequiredService<SummaryCache>();
         var syncNotifier = scope.ServiceProvider.GetRequiredService<SyncNotifier>();
 
-        // No HttpContext here, so AppDbContext's per-user query filter
-        // (_currentUserId, derived from IHttpContextAccessor) naturally
-        // resolves to null - which the filter treats as "no restriction" -
-        // so this already returns every account across every user, no
-        // IgnoreQueryFilters() needed.
-        var accounts = await db.Accounts.ToListAsync(stoppingToken);
+        // Every user's accounts - there's no signed-in user here, and
+        // AppDbContext's per-user filter matches nothing without one.
+        var accounts = await db.Accounts.IgnoreQueryFilters().ToListAsync(stoppingToken);
 
         // Aggregate counts per user, same shape the manual sync endpoint
         // reports, so both notify connected clients identically.

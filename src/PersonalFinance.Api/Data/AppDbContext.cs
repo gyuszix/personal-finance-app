@@ -23,9 +23,12 @@ public class AppDbContext : IdentityDbContext<User>
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Transaction>().HasQueryFilter(t => _currentUserId == null || t.UserId == _currentUserId);
+        // Fail closed: with no signed-in user (background jobs, anonymous
+        // requests) these match nothing. Code that genuinely needs every
+        // user's rows must say so with IgnoreQueryFilters() (#56).
+        modelBuilder.Entity<Transaction>().HasQueryFilter(t => t.UserId == _currentUserId);
 
-        modelBuilder.Entity<Account>().HasQueryFilter(a => _currentUserId == null || a.UserId == _currentUserId);
+        modelBuilder.Entity<Account>().HasQueryFilter(a => a.UserId == _currentUserId);
 
         modelBuilder.Entity<Account>().HasIndex(a => a.PlaidAccountId).IsUnique();
     }
