@@ -201,9 +201,9 @@ public static class TransactionEndpoints
             var accounts = await db.Accounts.Where(a => a.UserId == userId).ToListAsync();
 
             int totalAdded = 0, totalModified = 0, totalRemoved = 0;
-            foreach (var account in accounts)
+            foreach (var itemAccounts in PlaidSyncService.GroupByItem(accounts))
             {
-                var (added, modified, removed) = await syncService.SyncAccountAsync(account);
+                var (added, modified, removed) = await syncService.SyncItemAsync(itemAccounts);
                 totalAdded += added;
                 totalModified += modified;
                 totalRemoved += removed;

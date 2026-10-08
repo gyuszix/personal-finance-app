@@ -9,11 +9,31 @@ namespace PersonalFinance.Api.Services;
 
 public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidSyncService> logger, PlaidTokenProtector protector)
 {
-  public async Task<(int added, int modified, int removed)> SyncAccountAsync(Account account)
+  // /transactions/sync is an Item-level Plaid call: one access token returns
+  // the transactions for every account behind that bank connection. So
+  // callers group accounts by Item and sync each group once, rather than
+  // once per Account row (which fetched - and stored - every transaction N
+  // times, all attributed to whichever account triggered the call).
+  public static IEnumerable<List<Account>> GroupByItem(IEnumerable<Account> accounts) =>
+    accounts.GroupBy(a => a.PlaidAccessToken).Select(g => g.ToList());
+
+  // Syncs one Plaid Item. Every account passed in must share the same
+  // PlaidAccessToken - use GroupByItem.
+  public async Task<(int added, int modified, int removed)> SyncItemAsync(IReadOnlyList<Account> itemAccounts)
   {
+    if (itemAccounts.Count == 0) return (0, 0, 0);
+    if (itemAccounts.Select(a => a.PlaidAccessToken).Distinct().Count() > 1)
+      throw new ArgumentException("All accounts must belong to the same Plaid Item", nameof(itemAccounts));
+
     int added = 0, modified = 0, removed = 0;
-    var cursor = account.SyncCursor;
-    var accessToken = protector.Unprotect(account.PlaidAccessToken);
+    var accessToken = protector.Unprotect(itemAccounts[0].PlaidAccessToken);
+    var accountsByPlaidId = itemAccounts.ToDictionary(a => a.PlaidAccountId);
+
+    // The cursor belongs to the Item, but it's stored per Account row. If the
+    // rows disagree (e.g. an account was added to the Item later), restart
+    // from the beginning - Added below is idempotent, so a full replay is safe.
+    var cursors = itemAccounts.Select(a => a.SyncCursor).Distinct().ToList();
+    var cursor = cursors.Count == 1 ? cursors[0] : null;
     bool hasMore;
 
     do
@@ -24,8 +44,31 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
         Cursor = cursor
       });
 
+      var addedIds = response.Added.Select(t => t.TransactionId).ToList();
+      var existingById = await db.Transactions
+        .IgnoreQueryFilters()
+        .Where(t => addedIds.Contains(t.PlaidTransactionId))
+        .ToDictionaryAsync(t => t.PlaidTransactionId);
+
       foreach (var pt in response.Added)
       {
+        if (!accountsByPlaidId.TryGetValue(pt.AccountId ?? "", out var account))
+        {
+          logger.LogWarning(
+              "Skipping Plaid transaction {PlaidTransactionId}: unknown Plaid account {PlaidAccountId}",
+              pt.TransactionId, pt.AccountId);
+          continue;
+        }
+
+        // Already stored (a replayed cursor) - just make sure it's attributed
+        // to the right account, which older per-account syncs got wrong.
+        if (existingById.TryGetValue(pt.TransactionId ?? "", out var existing))
+        {
+          existing.AccountId = account.AccountId;
+          existing.UserId = account.UserId;
+          continue;
+        }
+
         db.Transactions.Add(new Transaction
         {
           AccountId = account.AccountId,
@@ -51,7 +94,7 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
           .FirstOrDefaultAsync(t => t.PlaidTransactionId == pt.TransactionId);
 
         if (existing is null) continue;
-        
+
         existing.Amount = (decimal)pt.Amount;
         existing.Description = pt.MerchantName ?? pt.Name ?? "Unknown";
         existing.IsPending = pt.Pending ?? false;
@@ -77,29 +120,27 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
       hasMore = response.HasMore;
     } while (hasMore);
 
-    account.SyncCursor = cursor;
-
-    // Refresh the cached balance - Account.Balance is otherwise only ever
+    // Refresh the cached balances - Account.Balance is otherwise only ever
     // set once, at link time, and would go stale forever without this.
     var balanceResponse = await plaid.AccountsBalanceGetAsync(new AccountsBalanceGetRequest
     {
       AccessToken = accessToken
     });
 
-    var matchingAccount = balanceResponse.Accounts
-      .FirstOrDefault(a => a.AccountId == account.PlaidAccountId);
-
-    if (matchingAccount is not null)
+    foreach (var plaidAccount in balanceResponse.Accounts)
     {
-      account.Balance = (decimal)(matchingAccount.Balances.Current ?? 0);
+      if (accountsByPlaidId.TryGetValue(plaidAccount.AccountId, out var account))
+        account.Balance = (decimal)(plaidAccount.Balances.Current ?? 0);
     }
+
+    foreach (var account in itemAccounts)
+      account.SyncCursor = cursor;
 
     await db.SaveChangesAsync();
 
     logger.LogInformation(
-        "Synced account {AccountId}: {Added} added, {Modified} modified, {Removed} removed, balance refreshed to {Balance}",
-        account.AccountId, added, modified, removed, account.Balance);
+        "Synced Plaid Item ({AccountCount} accounts: {AccountIds}): {Added} added, {Modified} modified, {Removed} removed, balances refreshed",
+        itemAccounts.Count, itemAccounts.Select(a => a.AccountId), added, modified, removed);
     return (added, modified, removed);
   }
 }
-          

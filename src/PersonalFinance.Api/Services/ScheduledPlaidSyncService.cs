@@ -3,7 +3,7 @@ using PersonalFinance.Api.Data;
 
 namespace PersonalFinance.Api.Services;
 
-// Runs PlaidSyncService against every linked account on a schedule, instead
+// Runs PlaidSyncService against every linked Plaid Item on a schedule, instead
 // of only syncing when a client calls POST /transactions/sync.
 public class ScheduledPlaidSyncService(
     IServiceScopeFactory scopeFactory,
@@ -52,20 +52,27 @@ public class ScheduledPlaidSyncService(
         // reports, so both notify connected clients identically.
         var totalsByUser = new Dictionary<string, (int Added, int Modified, int Removed)>();
 
-        foreach (var account in accounts)
+        // One Plaid call per Item (bank connection), not per Account row -
+        // see PlaidSyncService.GroupByItem.
+        var items = PlaidSyncService.GroupByItem(accounts).ToList();
+
+        foreach (var itemAccounts in items)
         {
+            // Every account in an Item was linked by the same user.
+            var userId = itemAccounts[0].UserId;
             try
             {
-                var (added, modified, removed) = await syncService.SyncAccountAsync(account);
-                var current = totalsByUser.GetValueOrDefault(account.UserId);
-                totalsByUser[account.UserId] = (
+                var (added, modified, removed) = await syncService.SyncItemAsync(itemAccounts);
+                var current = totalsByUser.GetValueOrDefault(userId);
+                totalsByUser[userId] = (
                     current.Added + added,
                     current.Modified + modified,
                     current.Removed + removed);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Scheduled sync failed for account {AccountId}", account.AccountId);
+                logger.LogError(ex, "Scheduled sync failed for Plaid Item with accounts {AccountIds}",
+                    itemAccounts.Select(a => a.AccountId));
             }
         }
 
@@ -76,7 +83,7 @@ public class ScheduledPlaidSyncService(
         }
 
         logger.LogInformation(
-            "Scheduled sync completed: {AccountCount} accounts across {UserCount} users",
-            accounts.Count, totalsByUser.Count);
+            "Scheduled sync completed: {ItemCount} Plaid Items ({AccountCount} accounts) across {UserCount} users",
+            items.Count, accounts.Count, totalsByUser.Count);
     }
 }
