@@ -21,8 +21,27 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', 'Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
       - name: Restore
         run: dotnet restore src/PersonalFinance.Tests/PersonalFinance.Tests.csproj
+
+      # Fails the build on any known-vulnerable package, direct or
+      # transitive, in the API/Shared/Tests graph (the Tests project
+      # references the others). `dotnet list` itself exits 0 either way, so
+      # check its output.
+      - name: Check for vulnerable packages
+        run: |
+          dotnet list src/PersonalFinance.Tests/PersonalFinance.Tests.csproj package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q "has the following vulnerable packages" vulnerable.txt; then
+            echo "::error::Vulnerable NuGet packages found - see above"
+            exit 1
+          fi
 
       - name: Build
         run: dotnet build src/PersonalFinance.Tests/PersonalFinance.Tests.csproj --no-restore --configuration Release
