@@ -47,6 +47,9 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<ApiService>();
 
+        // Live "sync completed" pushes from the API, for the signed-in session
+        builder.Services.AddSingleton<SyncHubService>();
+
         // Plaid Link - WebView-based today, #32/#33 may swap in native SDKs later
         builder.Services.AddTransient<IPlaidLinkService, PlaidLinkWebService>();
 
