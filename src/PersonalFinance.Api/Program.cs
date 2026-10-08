@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
@@ -49,6 +50,23 @@ using (var scope = app.Services.CreateScope())
     {
         var db = services.GetRequiredService<AppDbContext>();
         db.Database.EnsureCreated();
+    }
+    else
+    {
+        // Say which Postgres we actually reached. A native Postgres bound to
+        // 127.0.0.1:5432 silently wins over the docker-compose one on
+        // 0.0.0.0:5432 (#42); version() names the build platform, so a
+        // "linux" server is the container and a "darwin" one is Homebrew.
+        var db = services.GetRequiredService<AppDbContext>();
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT version()";
+        var serverVersion = await command.ExecuteScalarAsync();
+        app.Logger.LogInformation(
+            "Connected to database {Database} on {DataSource}: {ServerVersion}",
+            connection.Database, connection.DataSource, serverVersion);
+        await connection.CloseAsync();
     }
 
     // Seed roles in every environment — registration assigns the "User" role,

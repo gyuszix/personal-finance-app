@@ -110,8 +110,8 @@ psql "postgresql://claude_ro@localhost:5432/personalfinance" \
   container, which is stopped and whose port mapping would collide with it.
   The MCP server has to match wherever `ConnectionStrings:Default` actually
   resolves, or it will introspect an empty database and quietly mislead you.
-  This is the same trap as #42, and the README's Local development section
-  still describes only the container path.
+  This is the same trap as #42 - see the README's Local development section
+  for how to tell which server you're on.
 - **The `command` path is machine-specific.** `pipx` installs to
   `~/.local/bin`, which is not on the PATH Claude Code uses to spawn stdio
   servers, so `.mcp.json` hardcodes an absolute path under `/Users/gyuszix`.
