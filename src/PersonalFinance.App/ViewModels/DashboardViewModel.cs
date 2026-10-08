@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PersonalFinance.App.Services;
@@ -44,6 +45,20 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty]
     private decimal totalLiabilities;
 
+    // First day of the month the cash flow section shows. Starts on the
+    // current month; the user can step back through history (#63).
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MonthLabel))]
+    [NotifyPropertyChangedFor(nameof(CanGoToNextMonth))]
+    private DateTime selectedMonth = StartOfMonth(DateTime.Today);
+
+    public string MonthLabel => SelectedMonth == StartOfMonth(DateTime.Today)
+        ? "This Month"
+        : SelectedMonth.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
+
+    // There's no cash flow in the future to show.
+    public bool CanGoToNextMonth => SelectedMonth < StartOfMonth(DateTime.Today);
+
     [ObservableProperty]
     private decimal income;
 
@@ -61,7 +76,7 @@ public partial class DashboardViewModel : ObservableObject
         HasError = false;
 
         var summaryTask = _apiService.GetAccountsSummaryAsync();
-        var cashflowTask = _apiService.GetCashflowAsync();
+        var cashflowTask = _apiService.GetCashflowAsync(SelectedMonth);
         await Task.WhenAll(summaryTask, cashflowTask);
 
         var summary = summaryTask.Result;
@@ -89,6 +104,45 @@ public partial class DashboardViewModel : ObservableObject
 
         IsLoading = false;
     }
+
+    [RelayCommand]
+    private async Task PreviousMonthAsync()
+    {
+        SelectedMonth = SelectedMonth.AddMonths(-1);
+        await LoadCashflowAsync();
+    }
+
+    [RelayCommand]
+    private async Task NextMonthAsync()
+    {
+        if (!CanGoToNextMonth) return;
+        SelectedMonth = SelectedMonth.AddMonths(1);
+        await LoadCashflowAsync();
+    }
+
+    // Changing month only changes the cash flow - no need to reload balances.
+    private async Task LoadCashflowAsync()
+    {
+        var month = SelectedMonth;
+        var cashflow = await _apiService.GetCashflowAsync(month);
+
+        // The user may have stepped again while this was in flight.
+        if (month != SelectedMonth) return;
+
+        if (cashflow == null)
+        {
+            ErrorMessage = "Couldn't load that month. Tap Refresh to try again.";
+            HasError = true;
+            return;
+        }
+
+        HasError = false;
+        Income = cashflow.Income;
+        Expenses = cashflow.Expenses;
+        Net = cashflow.Net;
+    }
+
+    private static DateTime StartOfMonth(DateTime date) => new(date.Year, date.Month, 1);
 
     [RelayCommand]
     private async Task GoToAccountsAsync()

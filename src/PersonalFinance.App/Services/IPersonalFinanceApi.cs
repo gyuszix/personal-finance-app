@@ -27,8 +27,12 @@ public interface IPersonalFinanceApi
     [Get("/api/v1/accounts/summary")]
     Task<ApiResponse<AccountsSummaryResponse>> GetAccountsSummaryAsync();
 
+    [Get("/api/v1/transactions/categories")]
+    Task<ApiResponse<List<string>>> GetCategoriesAsync();
+
+    // month is "yyyy-MM"; null means the current month
     [Get("/api/v1/transactions/cashflow")]
-    Task<ApiResponse<CashflowResponse>> GetCashflowAsync();
+    Task<ApiResponse<CashflowResponse>> GetCashflowAsync([Query] string? month);
 
     [Get("/api/v1/plaid/link-token")]
     Task<ApiResponse<LinkTokenResponse>> GetLinkTokenAsync();

@@ -61,7 +61,22 @@
                     </Grid>
 
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="This Month" Style="{StaticResource Headline}" />
+                        <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="8">
+                            <Button Grid.Column="0"
+                                    Text="‹"
+                                    SemanticProperties.Description="Previous month"
+                                    Command="{Binding PreviousMonthCommand}" />
+                            <Label Grid.Column="1"
+                                   Text="{Binding MonthLabel}"
+                                   Style="{StaticResource Headline}"
+                                   HorizontalTextAlignment="Center"
+                                   VerticalOptions="Center" />
+                            <Button Grid.Column="2"
+                                    Text="›"
+                                    SemanticProperties.Description="Next month"
+                                    Command="{Binding NextMonthCommand}"
+                                    IsEnabled="{Binding CanGoToNextMonth}" />
+                        </Grid>
                         <Grid ColumnDefinitions="*, *, *" ColumnSpacing="16">
                             <VerticalStackLayout Grid.Column="0" Spacing="4">
                                 <Label Text="Income" FontAttributes="Bold" />

@@ -157,6 +157,15 @@ Income vs. expense for a month. Excludes pending transactions and internal trans
 `income`/`expenses` are always ≥ 0. `net = income - expenses`.
 - `400` — validation problem if `month` isn't `yyyy-MM`
 
+### `GET /api/v1/transactions/categories`
+
+Every `categoryPrimary` the user has at least one transaction in, across all months, sorted. Transactions without a category aren't represented. Use these values for `GET /transactions?category=`.
+
+**Response**
+```json
+["FOOD_AND_DRINK", "INCOME", "TRAVEL"]
+```
+
 ### `POST /api/v1/transactions/sync`
 
 Triggers a Plaid cursor-based sync for every bank connection (Plaid Item) the user has linked, plus a balance refresh for each of its accounts. Idempotent to call repeatedly - each Item's cursor picks up only what changed since last sync.
