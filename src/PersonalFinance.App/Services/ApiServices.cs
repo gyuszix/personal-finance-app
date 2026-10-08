@@ -2,11 +2,18 @@ using PersonalFinance.Shared.DTOs;
 
 namespace PersonalFinance.App.Services;
 
-public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider, TransactionCacheService cacheService)
+public class ApiService(
+    IPersonalFinanceApi api, AuthTokenProvider tokenProvider, TransactionCacheService cacheService, SyncHubService syncHub)
 {
     // Loads a previously persisted session on app startup. Returns false if
     // there's nothing stored - caller should send the user to the login page.
-    public Task<bool> TryRestoreSessionAsync() => tokenProvider.TryRestoreAsync();
+    public async Task<bool> TryRestoreSessionAsync()
+    {
+        if (!await tokenProvider.TryRestoreAsync()) return false;
+
+        _ = syncHub.StartAsync();
+        return true;
+    }
 
     // Revokes the refresh token server-side (best-effort) and drops the local session
     public async Task LogoutAsync()
@@ -23,6 +30,7 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
             }
         }
 
+        await syncHub.StopAsync();
         tokenProvider.Clear();
         await cacheService.ClearAsync();
     }
@@ -36,6 +44,9 @@ public class ApiService(IPersonalFinanceApi api, AuthTokenProvider tokenProvider
         // offline cache (e.g. after their session expired without a logout).
         await cacheService.ClearAsync();
         await tokenProvider.SetSessionAsync(response.Content.Token, response.Content.RefreshToken);
+
+        // Not awaited - sign-in shouldn't wait on (or fail because of) the hub.
+        _ = syncHub.StartAsync();
         return response.Content.Token;
     }
 
