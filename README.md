@@ -53,6 +53,16 @@ dotnet user-secrets set "Plaid:Environment" "sandbox"
 
 Then apply migrations: `dotnet ef database update --project src/PersonalFinance.Api`
 
+> **Already have a native Postgres (e.g. Homebrew `postgresql@16`)?** It
+> binds `127.0.0.1:5432`, which beats the container's `0.0.0.0:5432` for
+> `Host=localhost` - so the API silently uses the native server while
+> `docker compose up` still looks healthy. Check what owns the port with
+> `lsof -nP -iTCP:5432 -sTCP:LISTEN` (a `com.docker` process is the
+> container; `postgres` is native), and either stop one of them or point
+> the connection string at the one you mean. The API logs which server it
+> reached on startup (`Connected to database ...`): the container reports
+> a `linux` build, Homebrew a `darwin` one.
+
 For realistic test data without seeding anything yourself, see [`docs/PLAID_SANDBOX.md`](docs/PLAID_SANDBOX.md).
 
 ### Pointing the app at a different API
