@@ -93,6 +93,54 @@ The key files aren't encrypted at rest - protect that directory like the
 database. Don't change the app's content root/application name without a
 plan either: that also makes existing tokens unreadable.
 
+## Dashboard
+
+The Dashboard is a set of cards in tabs (Spending, Cash Flow, Savings, Debt,
+Net Worth), with one month selector for all of them. A tab only appears
+once a card belongs to it. Each card loads independently, so a failing
+metric shows its own error and the rest of the Dashboard still works.
+
+### How metrics are defined
+
+Every metric uses the same definition of income and spending
+(`Spending.CountedInCashflow` in the API): posted transactions only, with
+transfers between your own accounts (`TRANSFER_IN`/`TRANSFER_OUT`) and
+credit card payments (`LOAN_PAYMENTS_CREDIT_CARD_PAYMENT`) left out. A card
+payment isn't new spending, because the purchases it pays for were already
+counted on the card. Plaid's sign convention applies: a positive amount is
+money out, a negative amount is money in. Income is take-home pay.
+
+| Card | Tab | Definition |
+|---|---|---|
+| Spending by category | Spending | The month's spending per Plaid category. Donut of the top 5 plus "Other", total in the centre |
+| Net cash flow | Cash Flow | Income − spending for the month, over 12 months of income vs spending bars |
+| Net worth | Net Worth | Assets (depository, investment) − liabilities (credit, loan), today |
+
+A ratio with nothing to divide by (no income, no spending) shows "—", never
+0% or infinity.
+
+### Adding a Dashboard card
+
+1. **Server:** add a class implementing `IInsight<TResult>` in
+   `src/PersonalFinance.Api/Services/Insights/`, with a `Key` (the URL
+   segment) and `CalculateAsync(InsightMonth, ...)`. Put its response DTO in
+   `PersonalFinance.Shared/DTOs/Insights/`. Then add one line to
+   `InsightEndpoints`: `insights.MapInsight<MyInsight, MyResponse>();`.
+   Sign-in, `month` validation (yyyy-MM, from 2000-01 up to the current
+   month), per-user caching and invalidation on sync all come with it.
+   Query through `AppDbContext`, whose per-user filter scopes everything to
+   the caller. Use `Ratio.Of` for any division.
+2. **App:** add a folder under `src/PersonalFinance.App/Insights/Cards/`
+   with a ViewModel that derives from `InsightCardViewModel<MyResponse>`
+   (set `Key`, `Title`, `Group`, and `Apply` the response) and a
+   `ContentView` with `ControlTemplate="{StaticResource InsightCardTemplate}"`,
+   which supplies the title, loading, error and empty states. Use theme
+   tokens and `ChartPalette` for colours, and `Format` for money, percentages
+   and "—".
+3. **Register** it in `MauiProgram`, one line:
+   `builder.Services.AddInsightCard<MyCard, MyCardView>();`
+4. Add tests for the calculator next to `InsightEndpointsTests`.
+
 ## Theme
 
 Dark only: black, with torii vermilion and neon blue as the two accents, and

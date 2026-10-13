@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.CashflowTrend"
+             x:Class="PersonalFinance.App.Insights.Cards.CashflowTrend.CashflowTrendCardView"
+             x:DataType="card:CashflowTrendCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="16">
+        <Label Text="{Binding NetText}" Style="{StaticResource Figure}">
+            <Label.Triggers>
+                <DataTrigger TargetType="Label" Binding="{Binding IsNetNegative}" Value="True">
+                    <Setter Property="TextColor" Value="{StaticResource Negative}" />
+                </DataTrigger>
+            </Label.Triggers>
+        </Label>
+
+        <Grid ColumnDefinitions="*, *" ColumnSpacing="16">
+            <VerticalStackLayout Spacing="2">
+                <HorizontalStackLayout Spacing="6">
+                    <BoxView Color="{StaticResource Neon}" WidthRequest="8" HeightRequest="8" CornerRadius="4" VerticalOptions="Center" />
+                    <Label Text="Income" Style="{StaticResource Caption}" />
+                </HorizontalStackLayout>
+                <Label Text="{Binding IncomeText}" FontSize="17" />
+            </VerticalStackLayout>
+            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                <HorizontalStackLayout Spacing="6">
+                    <BoxView Color="{StaticResource Torii}" WidthRequest="8" HeightRequest="8" CornerRadius="4" VerticalOptions="Center" />
+                    <Label Text="Spending" Style="{StaticResource Caption}" />
+                </HorizontalStackLayout>
+                <Label Text="{Binding ExpensesText}" FontSize="17" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <lvc:CartesianChart Series="{Binding Series}"
+                            XAxes="{Binding XAxes}"
+                            YAxes="{Binding YAxes}"
+                            LegendPosition="Hidden"
+                            HeightRequest="200"
+                            BackgroundColor="Transparent" />
+    </VerticalStackLayout>
+
+</ContentView>

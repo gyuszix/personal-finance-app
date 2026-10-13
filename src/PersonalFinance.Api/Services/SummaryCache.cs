@@ -1,15 +1,22 @@
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace PersonalFinance.Api.Services;
 
 // Thin wrapper around IMemoryCache for the read-heavy summary endpoints
-// (accounts/summary, transactions/summary, transactions/cashflow). One
+// (accounts/summary, transactions/summary, transactions/cashflow, and the
+// /insights endpoints). One
 // place that owns the cache key shapes, so both the endpoints (that read/
 // write the cache) and anything that triggers a sync (that needs to
 // invalidate it) agree on the same keys.
 public class SummaryCache(IMemoryCache cache)
 {
     private static readonly TimeSpan DefaultTtl = TimeSpan.FromSeconds(60);
+
+    // Insights span many months and metrics, too many keys to evict one by
+    // one. Each user's insight keys carry a generation number instead, and
+    // invalidating bumps it, so every older entry is simply never read again.
+    private readonly ConcurrentDictionary<string, long> _insightGenerations = new();
 
     public string AccountsSummaryKey(string userId) => $"accounts-summary:{userId}";
 
@@ -18,6 +25,9 @@ public class SummaryCache(IMemoryCache cache)
 
     public string CashflowKey(string userId, DateTime periodStart) =>
         $"cashflow:{userId}:{periodStart:yyyy-MM}";
+
+    public string InsightKey(string userId, string insight, string period) =>
+        $"insight:{userId}:{_insightGenerations.GetValueOrDefault(userId)}:{insight}:{period}";
 
     public bool TryGet<T>(string key, out T? value) => cache.TryGetValue(key, out value);
 
@@ -38,5 +48,7 @@ public class SummaryCache(IMemoryCache cache)
         var currentMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         cache.Remove(TransactionsSummaryKey(userId, currentMonth));
         cache.Remove(CashflowKey(userId, currentMonth));
+
+        _insightGenerations.AddOrUpdate(userId, 1, (_, generation) => generation + 1);
     }
 }

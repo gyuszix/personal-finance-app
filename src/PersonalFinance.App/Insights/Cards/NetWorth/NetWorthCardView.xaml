@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.NetWorth"
+             x:Class="PersonalFinance.App.Insights.Cards.NetWorth.NetWorthCardView"
+             x:DataType="card:NetWorthCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="16">
+        <Label Text="{Binding NetWorthText}" Style="{StaticResource Figure}" />
+        <Grid ColumnDefinitions="*, *" ColumnSpacing="16">
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Assets" Style="{StaticResource Caption}" />
+                <Label Text="{Binding AssetsText}" FontSize="17" TextColor="{StaticResource Positive}" />
+            </VerticalStackLayout>
+            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                <Label Text="Liabilities" Style="{StaticResource Caption}" />
+                <Label Text="{Binding LiabilitiesText}" FontSize="17" TextColor="{StaticResource Negative}" />
+            </VerticalStackLayout>
+        </Grid>
+    </VerticalStackLayout>
+
+</ContentView>
