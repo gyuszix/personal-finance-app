@@ -19,7 +19,7 @@
                IsPassword="True" />
 
         <Label Text="{Binding ErrorMessage}"
-               TextColor="Red" />
+               Style="{StaticResource ErrorText}" />
 
         <ActivityIndicator IsRunning="{Binding IsLoading}"
                            IsVisible="{Binding IsLoading}" />
@@ -27,7 +27,7 @@
         <Button Text="Register"
                 Command="{Binding RegisterCommand}" />
 
-        <Button Text="Back to Login"
+        <Button Text="Back to Login" Style="{StaticResource GhostButton}"
                 Command="{Binding GoToLoginCommand}" />
 
     </VerticalStackLayout>

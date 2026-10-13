@@ -11,6 +11,11 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Dark theme: black with torii vermilion and neon blue accents, plus
+  orange and blue. Replaces the MAUI template's purple. Every colour is a
+  named token in `Colors.xaml`, and the views no longer hardcode any.
+  Adds the `Card`, `Eyebrow`, `Figure`, `Caption`, `ErrorText`,
+  `GhostButton` and `IconButton` styles. README lists the palette (#86)
 - A daily balance snapshot per account (`BalanceSnapshots`), recorded on
   every sync; the last sync of the day wins. The migration seeds today
   from current balances. This is the history the net worth trend reads,

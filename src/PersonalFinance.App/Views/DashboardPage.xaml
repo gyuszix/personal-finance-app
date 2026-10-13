@@ -15,6 +15,7 @@
                    VerticalOptions="Center" />
             <Button Grid.Column="1"
                     Text="Refresh"
+                    Style="{StaticResource GhostButton}"
                     Command="{Binding LoadDashboardCommand}"
                     IsEnabled="{Binding IsNotLoading}" />
         </Grid>
@@ -27,7 +28,7 @@
             <VerticalStackLayout Padding="20" Spacing="24">
 
                 <Label Text="{Binding ErrorMessage}"
-                       TextColor="Red"
+                       Style="{StaticResource ErrorText}"
                        IsVisible="{Binding HasError}" />
 
                 <!-- First-run state: nothing linked yet, so the figures below
@@ -64,6 +65,7 @@
                         <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="8">
                             <Button Grid.Column="0"
                                     Text="‹"
+                                    Style="{StaticResource IconButton}"
                                     SemanticProperties.Description="Previous month"
                                     Command="{Binding PreviousMonthCommand}" />
                             <Label Grid.Column="1"
@@ -73,6 +75,7 @@
                                    VerticalOptions="Center" />
                             <Button Grid.Column="2"
                                     Text="›"
+                                    Style="{StaticResource IconButton}"
                                     SemanticProperties.Description="Next month"
                                     Command="{Binding NextMonthCommand}"
                                     IsEnabled="{Binding CanGoToNextMonth}" />

@@ -9,6 +9,9 @@ public partial class App : Application
 	public App(ApiService apiService)
 	{
 		InitializeComponent();
+
+		// The palette is dark only (#86); keep native controls dark too.
+		UserAppTheme = AppTheme.Dark;
 		_apiService = apiService;
 
 		AppDomain.CurrentDomain.UnhandledException += (_, e) =>
