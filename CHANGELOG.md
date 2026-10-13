@@ -11,6 +11,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Each account's Plaid subtype (Checking, Savings, CreditCard, ...) is
+  stored and returned on `AccountResponse.Subtype`, so liquid cash can be
+  told apart from CDs and HSAs. Set at link time; accounts linked
+  earlier pick it up on their next sync (#83)
 - Dashboard can step back through past months of cash flow; the
   Transactions category filter offers every category the user has, not
   just this month's, via the new `GET /transactions/categories` (#63)

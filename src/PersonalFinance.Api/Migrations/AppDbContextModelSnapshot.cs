@@ -181,6 +181,9 @@ namespace PersonalFinance.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Subtype")
+                        .HasColumnType("text");
+
                     b.Property<string>("SyncCursor")
                         .HasColumnType("text");
 

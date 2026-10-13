@@ -83,6 +83,7 @@ public static class PlaidEndpoints
                     account.PlaidAccessToken = protectedAccessToken;
                     account.BankName = bankName;
                     account.Balance = plaidAccount.Balances.Current ?? 0;
+                    account.Subtype = plaidAccount.Subtype?.ToString();
                 }
                 else
                 {
@@ -93,6 +94,7 @@ public static class PlaidEndpoints
                         PlaidAccountId = plaidAccount.AccountId,
                         BankName = bankName,
                         AccountType = plaidAccount.Type.ToString(),
+                        Subtype = plaidAccount.Subtype?.ToString(),
                         Balance = plaidAccount.Balances.Current ?? 0
                     });
                 }

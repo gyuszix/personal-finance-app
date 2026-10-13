@@ -20,4 +20,16 @@ public class AccountEndpointsTests(TestWebApplicationFactory factory) : IClassFi
         Assert.Equal(400m, summary.TotalLiabilities);
         Assert.Equal(1600m, summary.NetWorth);
     }
+
+    [Fact]
+    public async Task Summary_ReturnsEachAccountsSubtype()
+    {
+        var user = await TestUser.CreateAsync(factory);
+        await user.AddAccountAsync(accountType: "Depository", subtype: "Savings");
+        await user.AddAccountAsync(accountType: "Depository");
+
+        var summary = await user.Client.GetFromJsonAsync<AccountsSummaryResponse>("/api/v1/accounts/summary");
+
+        Assert.Equivalent(new string?[] { "Savings", null }, summary!.Accounts.Select(a => a.Subtype));
+    }
 }
