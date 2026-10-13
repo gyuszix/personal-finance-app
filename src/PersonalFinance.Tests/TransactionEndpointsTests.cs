@@ -131,6 +131,28 @@ public class TransactionEndpointsTests(TestWebApplicationFactory factory) : ICla
         Assert.Equal(700m, cashflow.Net);
     }
 
+    // The purchase on the card is the spending; paying the card from checking
+    // is not spending again, and the payment landing on the card isn't income.
+    [Fact]
+    public async Task Cashflow_IgnoresCreditCardPayments_OnBothSides()
+    {
+        var user = await TestUser.CreateAsync(factory);
+        var checking = await user.AddAccountAsync();
+        var card = await user.AddAccountAsync(accountType: "Credit");
+        await user.AddTransactionAsync(card, 200m, category: "FOOD_AND_DRINK");
+        await user.AddTransactionAsync(checking, 200m, category: "LOAN_PAYMENTS",
+            detailedCategory: "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT");
+        await user.AddTransactionAsync(card, -200m, category: "LOAN_PAYMENTS",
+            detailedCategory: "LOAN_PAYMENTS_CREDIT_CARD_PAYMENT");
+        await user.AddTransactionAsync(checking, 150m, category: "LOAN_PAYMENTS",
+            detailedCategory: "LOAN_PAYMENTS_CAR_PAYMENT");
+
+        var cashflow = await user.Client.GetFromJsonAsync<CashflowResponse>("/api/v1/transactions/cashflow");
+
+        Assert.Equal(0m, cashflow!.Income);
+        Assert.Equal(350m, cashflow.Expenses);
+    }
+
     [Fact]
     public async Task Delete_SomeoneElsesTransaction_IsForbiddenAndKeepsIt()
     {

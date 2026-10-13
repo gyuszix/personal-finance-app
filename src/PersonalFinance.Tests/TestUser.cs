@@ -54,7 +54,8 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
     }
 
     public async Task<Transaction> AddTransactionAsync(
-        Account account, decimal amount, string? category = "FOOD_AND_DRINK", DateTime? date = null, bool pending = false)
+        Account account, decimal amount, string? category = "FOOD_AND_DRINK", DateTime? date = null, bool pending = false,
+        string? detailedCategory = null)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -67,7 +68,8 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
             Date = date ?? DateTime.UtcNow,
             PlaidTransactionId = Guid.NewGuid().ToString(),
             IsPending = pending,
-            CategoryPrimary = category
+            CategoryPrimary = category,
+            CategoryDetailed = detailedCategory
         };
         db.Transactions.Add(transaction);
         await db.SaveChangesAsync();
