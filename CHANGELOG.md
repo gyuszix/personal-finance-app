@@ -11,6 +11,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Debt-to-income card on a new Debt tab, measured against take-home pay
+  from your deposits (no settings needed), with payments broken down by
+  loan type. Credit card payments aren't counted as debt service (#89)
 - Emergency fund card on the Savings tab: months of usual spending your
   checking and savings cover, against the 3-6 month guideline (#90)
 - Burn rate card on the Cash Flow tab: average monthly spending over the
