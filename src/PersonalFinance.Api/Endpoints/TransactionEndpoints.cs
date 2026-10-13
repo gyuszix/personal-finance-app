@@ -136,11 +136,8 @@ public static class TransactionEndpoints
         }).RequireAuthorization();
 
         // Income vs. expense for a given month (same default/format as
-        // /transactions/summary). Excludes pending transactions (same reason
-        // as above) and transfer categories - TRANSFER_IN/TRANSFER_OUT are
-        // money moving between the user's own linked accounts, not real
-        // income or spending, and including them would double-count and
-        // inflate both sides of the cash flow.
+        // /transactions/summary). Only transactions Spending.CountedInCashflow
+        // keeps - no pending, transfers or credit card payments.
         app.MapGet("/transactions/cashflow", async (
             string? month,
             AppDbContext db,
@@ -174,11 +171,9 @@ public static class TransactionEndpoints
             // Plaid convention: positive Amount = money out (expense),
             // negative Amount = money in (income) - see /transactions/summary
             // for the same convention showing up in per-category totals.
-            var cashflowTransactions = db.Transactions.Where(t =>
-                !t.IsPending
-                && t.Date >= periodStart && t.Date < periodEnd
-                && t.CategoryPrimary != "TRANSFER_IN"
-                && t.CategoryPrimary != "TRANSFER_OUT");
+            var cashflowTransactions = db.Transactions
+                .CountedInCashflow()
+                .Where(t => t.Date >= periodStart && t.Date < periodEnd);
 
             var income = await cashflowTransactions
                 .Where(t => t.Amount < 0)
@@ -189,8 +184,8 @@ public static class TransactionEndpoints
                 .SumAsync(t => t.Amount);
 
             logger.LogInformation(
-                "Returned cash flow for user {UserId}, period {PeriodStart:yyyy-MM}: income {Income}, expenses {Expenses}",
-                userId, periodStart, income, expenses);
+                "Returned cash flow for user {UserId}, period {PeriodStart:yyyy-MM}",
+                userId, periodStart);
 
             var response = new CashflowResponse
             {

@@ -85,6 +85,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- Cash flow no longer counts credit card payments: paying the card from
+  checking was counted as spending on top of the card purchases it paid
+  for, and the payment landing on the card as income. Which transactions
+  count as income and spending is now defined once, in `Spending` (#82)
 - Transactions duplicated by the pre-#41 sync are removed: one row is
   kept per Plaid transaction, sync cursors are reset so the next sync
   re-attributes each one to its real account, and a unique index on
