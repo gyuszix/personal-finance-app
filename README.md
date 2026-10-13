@@ -2,6 +2,12 @@
 
 **Version:** [0.2.0](CHANGELOG.md#020---2026-09-08)
 
+
+<img width="2560" height="1519" alt="Screenshot 2026-10-13 at 12 54 48" src="https://github.com/user-attachments/assets/c92f913e-b065-450b-aae5-8ab3ba8fd288" />
+
+<img width="2560" height="1519" alt="Screenshot 2026-10-13 at 12 55 21" src="https://github.com/user-attachments/assets/9a785df7-adac-4f7b-9f95-945ec75ff67f" />
+
+
 A cross-platform personal finance app that connects to bank accounts (via Plaid) and provides spending insights, transaction history, and budget tracking. Runs on iOS, Android, macOS, and Windows from a single codebase.
 
 ## Tech stack
