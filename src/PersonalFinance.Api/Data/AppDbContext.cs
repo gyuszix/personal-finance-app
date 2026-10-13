@@ -19,6 +19,7 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<Transaction> Transactions {get; set;}
     public DbSet<RefreshToken> RefreshTokens {get; set;}
     public DbSet<BalanceSnapshot> BalanceSnapshots {get; set;}
+    public DbSet<Budget> Budgets {get; set;}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,8 @@ public class AppDbContext : IdentityDbContext<User>
 
         modelBuilder.Entity<BalanceSnapshot>().HasQueryFilter(s => s.UserId == _currentUserId);
 
+        modelBuilder.Entity<Budget>().HasQueryFilter(b => b.UserId == _currentUserId);
+
         modelBuilder.Entity<Account>().HasIndex(a => a.PlaidAccountId).IsUnique();
 
         // Plaid transaction IDs are globally unique. Without this, the old
@@ -42,5 +45,10 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.AccountId, s.Date }).IsUnique();
         modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.UserId, s.Date });
         modelBuilder.Entity<BalanceSnapshot>().Property(s => s.UserId).IsRequired();
+
+        modelBuilder.Entity<Budget>().HasIndex(b => new { b.UserId, b.Category }).IsUnique();
+        modelBuilder.Entity<Budget>().Property(b => b.UserId).IsRequired();
+        modelBuilder.Entity<Budget>().Property(b => b.Category).IsRequired().HasMaxLength(64);
+        modelBuilder.Entity<Budget>().Property(b => b.MonthlyLimit).HasPrecision(12, 2);
     }
 }

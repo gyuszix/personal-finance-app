@@ -13,7 +13,7 @@ public class InsightEndpointsTests(TestWebApplicationFactory factory) : IClassFi
     public static TheoryData<string> Insights =>
     [
         "spending-by-category", "cashflow-trend",
-        "credit-debit-split", "credit-share-trend", "credit-debit-by-category", "card-payoff", "savings-rate", "burn-rate", "emergency-fund", "debt-to-income", "net-worth-trend"
+        "credit-debit-split", "credit-share-trend", "credit-debit-by-category", "card-payoff", "savings-rate", "burn-rate", "emergency-fund", "debt-to-income", "net-worth-trend", "budget-variance"
     ];
 
     [Theory]

@@ -45,6 +45,16 @@ public interface IPersonalFinanceApi
 
     [Post("/api/v1/transactions/sync")]
     Task<IApiResponse> SyncTransactionsAsync();
+
+    [Get("/api/v1/budgets")]
+    Task<ApiResponse<List<BudgetResponse>>> GetBudgetsAsync();
+
+    [Put("/api/v1/budgets/{category}")]
+    Task<IApiResponse> SetBudgetAsync(string category, [Body] SetBudgetBody body);
+
+    // Back to the suggested limit
+    [Delete("/api/v1/budgets/{category}")]
+    Task<IApiResponse> ClearBudgetAsync(string category);
 }
 
 public record LoginRequest(string Email, string Password);

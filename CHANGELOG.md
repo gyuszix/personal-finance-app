@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Budgets: a monthly limit per spending category, suggested from your
+  last three months until you set your own on the new Budgets page, and
+  a Budgets card showing spent vs limit with over-budget categories
+  first. `GET /budgets`, `PUT /budgets/{category}` (0-1,000,000, spending
+  categories only) and `DELETE /budgets/{category}` to go back to the
+  suggestion. The `Budgets` table has the per-user filter that fails
+  closed (#88)
 - Net worth trend card on the Net Worth tab: net worth per day from the
   balance snapshots, over 30 days, 90 days or a year (#93)
 - Debt-to-income card on a new Debt tab, measured against take-home pay

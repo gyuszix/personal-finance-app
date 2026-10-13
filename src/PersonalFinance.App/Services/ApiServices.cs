@@ -122,4 +122,23 @@ public class ApiService(
         var response = await api.SyncTransactionsAsync();
         return response.IsSuccessStatusCode;
     }
+
+    // Saved and suggested monthly limits per category (#88); null on failure.
+    public async Task<List<BudgetResponse>?> GetBudgetsAsync()
+    {
+        var response = await api.GetBudgetsAsync();
+        return response.Content;
+    }
+
+    public async Task<bool> SetBudgetAsync(string category, decimal monthlyLimit)
+    {
+        var response = await api.SetBudgetAsync(category, new SetBudgetBody { MonthlyLimit = monthlyLimit });
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<bool> ClearBudgetAsync(string category)
+    {
+        var response = await api.ClearBudgetAsync(category);
+        return response.IsSuccessStatusCode;
+    }
 }
