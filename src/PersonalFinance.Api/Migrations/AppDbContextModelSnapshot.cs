@@ -272,6 +272,9 @@ namespace PersonalFinance.Api.Migrations
 
                     b.HasKey("TransactionId");
 
+                    b.HasIndex("PlaidTransactionId")
+                        .IsUnique();
+
                     b.ToTable("Transactions");
                 });
 
