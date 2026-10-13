@@ -199,6 +199,37 @@ namespace PersonalFinance.Api.Migrations
                     b.ToTable("Accounts");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Api.Entities.BalanceSnapshot", b =>
+                {
+                    b.Property<int>("BalanceSnapshotId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("BalanceSnapshotId"));
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Balance")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("BalanceSnapshotId");
+
+                    b.HasIndex("AccountId", "Date")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Date");
+
+                    b.ToTable("BalanceSnapshots");
+                });
+
             modelBuilder.Entity("PersonalFinance.Api.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")

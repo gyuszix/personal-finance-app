@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System.Net;
 using System.Text;
 using System.Threading.RateLimiting;
@@ -178,6 +179,8 @@ public static class ServiceExtensions
     public static IServiceCollection AddPlaidIntegration(this IServiceCollection services, IConfiguration config)
     {
         services.AddScoped<PlaidSyncService>();
+        services.AddScoped<BalanceSnapshotService>();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddScoped<PlaidInstitutionService>();
         services.Configure<PlaidOptions>(config.GetSection("Plaid"));
         services.AddHttpClient();
