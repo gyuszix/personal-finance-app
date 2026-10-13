@@ -121,6 +121,7 @@ money out, a negative amount is money in. Income is take-home pay.
 | Burn rate | Cash Flow | Average monthly spending over the three most recent complete months (for the current month, the three before it). This month's pace = spent so far ÷ days elapsed × days in month, shown against the burn rate. "—" with no spending in the window |
 | Savings rate | Savings | (income − spending) ÷ income for the month, plus 12 months of the same. Take-home, because income is take-home pay. Negative when overspent, "—" with no income |
 | Emergency fund | Savings | Today's liquid cash (checking, savings, money market, cash management, PayPal, prepaid; CDs, HSAs and EBT excluded) ÷ the burn rate, in months. A depository account with no subtype yet counts as liquid |
+| Debt-to-income (take-home) | Debt | Monthly loan payments ÷ monthly take-home income, both averaged over the burn rate's three-month window. Income = money in categorised `INCOME`. Payments = `LOAN_PAYMENTS` out of bank or card accounts, excluding credit card payments. Reads higher than a lender's (gross-pay) DTI, so their thresholds aren't shown |
 | Net worth | Net Worth | Assets (depository, investment) − liabilities (credit, loan), today |
 
 A ratio with nothing to divide by (no income, no spending) shows "—", never

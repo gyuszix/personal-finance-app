@@ -9,13 +9,21 @@ public static class BurnRate
 {
     public const int WindowMonths = 3;
 
+    // The three complete months ending with the given one - or, for the
+    // current month, with the one before it. Shared by every metric that
+    // averages a "usual month".
+    public static (InsightMonth First, InsightMonth Last) Window(InsightMonth month, DateTimeOffset now)
+    {
+        var last = month == InsightMonth.Containing(now) ? month.AddMonths(-1) : month;
+        return (last.AddMonths(-(WindowMonths - 1)), last);
+    }
+
     public record Result(decimal? MonthlyAverage, InsightMonth First, InsightMonth Last);
 
     public static async Task<Result> ForAsync(
         AppDbContext db, InsightMonth month, DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var last = month == InsightMonth.Containing(now) ? month.AddMonths(-1) : month;
-        var first = last.AddMonths(-(WindowMonths - 1));
+        var (first, last) = Window(month, now);
         var months = await MonthlyCashflow.ForAsync(db, first, last, cancellationToken);
         var total = months.Sum(m => m.Spending);
 
