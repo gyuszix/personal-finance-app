@@ -11,6 +11,11 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- A daily balance snapshot per account (`BalanceSnapshots`), recorded on
+  every sync; the last sync of the day wins. The migration seeds today
+  from current balances. This is the history the net worth trend reads,
+  and it only goes back to the day this was applied. Removed with the
+  account when a bank is unlinked (#84)
 - Each account's Plaid subtype (Checking, Savings, CreditCard, ...) is
   stored and returned on `AccountResponse.Subtype`, so liquid cash can be
   told apart from CDs and HSAs. Set at link time; accounts linked

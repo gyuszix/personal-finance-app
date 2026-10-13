@@ -18,6 +18,7 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<Account> Accounts {get; set;}
     public DbSet<Transaction> Transactions {get; set;}
     public DbSet<RefreshToken> RefreshTokens {get; set;}
+    public DbSet<BalanceSnapshot> BalanceSnapshots {get; set;}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,10 +31,16 @@ public class AppDbContext : IdentityDbContext<User>
 
         modelBuilder.Entity<Account>().HasQueryFilter(a => a.UserId == _currentUserId);
 
+        modelBuilder.Entity<BalanceSnapshot>().HasQueryFilter(s => s.UserId == _currentUserId);
+
         modelBuilder.Entity<Account>().HasIndex(a => a.PlaidAccountId).IsUnique();
 
         // Plaid transaction IDs are globally unique. Without this, the old
         // per-account sync stored each transaction once per account (#53).
         modelBuilder.Entity<Transaction>().HasIndex(t => t.PlaidTransactionId).IsUnique();
+
+        modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.AccountId, s.Date }).IsUnique();
+        modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.UserId, s.Date });
+        modelBuilder.Entity<BalanceSnapshot>().Property(s => s.UserId).IsRequired();
     }
 }

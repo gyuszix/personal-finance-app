@@ -127,6 +127,7 @@ public static class AccountEndpoints
             }
 
             db.Transactions.RemoveRange(db.Transactions.Where(t => itemAccountIds.Contains(t.AccountId)));
+            db.BalanceSnapshots.RemoveRange(db.BalanceSnapshots.Where(s => itemAccountIds.Contains(s.AccountId)));
             db.Accounts.RemoveRange(itemAccounts);
             await db.SaveChangesAsync();
 
