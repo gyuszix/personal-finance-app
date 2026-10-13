@@ -11,6 +11,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Savings rate card on the Savings tab: the share of take-home pay kept
+  this month, with twelve months of saved (neon) and overspent (torii)
+  bars. "—" with no income (#91)
 - Credit vs debit cards on the Spending tab: the month's split with the
   average purchase on each, credit's share over 12 months, the split per
   category, and card payoff (payments ÷ credit spending, each payment

@@ -118,6 +118,7 @@ money out, a negative amount is money in. Income is take-home pay.
 | Credit vs debit by category | Spending | Per category, credit vs debit for the month, bars scaled to the largest category |
 | Card payoff | Spending | Card payments ÷ credit spending. A payment appears twice when both ends are linked, so the bank side is used, falling back to the card side when there's no bank side. 100% or more = paid in full |
 | Net cash flow | Cash Flow | Income − spending for the month, over 12 months of income vs spending bars |
+| Savings rate | Savings | (income − spending) ÷ income for the month, plus 12 months of the same. Take-home, because income is take-home pay. Negative when overspent, "—" with no income |
 | Net worth | Net Worth | Assets (depository, investment) − liabilities (credit, loan), today |
 
 A ratio with nothing to divide by (no income, no spending) shows "—", never

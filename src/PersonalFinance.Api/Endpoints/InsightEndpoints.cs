@@ -20,6 +20,7 @@ public static class InsightEndpoints
         insights.MapInsight<CreditShareTrendInsight, CreditShareTrendResponse>();
         insights.MapInsight<CreditDebitByCategoryInsight, CreditDebitByCategoryResponse>();
         insights.MapInsight<CardPayoffInsight, CardPayoffResponse>();
+        insights.MapInsight<SavingsRateInsight, SavingsRateResponse>();
     }
 
     private static void MapInsight<TInsight, TResult>(this RouteGroupBuilder group)
