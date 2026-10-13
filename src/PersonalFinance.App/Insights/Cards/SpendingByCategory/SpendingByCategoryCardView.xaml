@@ -8,7 +8,7 @@
              ControlTemplate="{StaticResource InsightCardTemplate}">
 
     <VerticalStackLayout Spacing="20">
-        <Grid HeightRequest="240">
+        <Grid HeightRequest="280">
             <lvc:PieChart Series="{Binding Series}"
                           InitialRotation="-90"
                           LegendPosition="Hidden"

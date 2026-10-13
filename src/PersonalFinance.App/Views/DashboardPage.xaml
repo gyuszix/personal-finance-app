@@ -8,13 +8,13 @@
              Title="Dashboard">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20,16,20,32"
-                             Spacing="20"
-                             MaximumWidthRequest="720">
+        <!-- Full width; the cards flow into columns (see DashboardPage.LayOutCards) -->
+        <VerticalStackLayout Padding="40,28,40,48" Spacing="24">
 
             <Grid ColumnDefinitions="*, Auto">
                 <Label Text="Dashboard"
                        Style="{StaticResource Headline}"
+                       FontSize="32"
                        VerticalOptions="Center" />
                 <Button Grid.Column="1"
                         Text="Refresh"
@@ -53,6 +53,7 @@
                     <Label Grid.Column="1"
                            Text="{Binding MonthLabel}"
                            Style="{StaticResource SubHeadline}"
+                           FontSize="20"
                            HorizontalTextAlignment="Center"
                            VerticalOptions="Center" />
                     <Button Grid.Column="2"
@@ -85,10 +86,14 @@
                     </HorizontalStackLayout>
                 </ScrollView>
 
-                <!-- Cards; each one's view comes from its AddInsightCard registration -->
-                <VerticalStackLayout x:Name="Cards"
-                                     Spacing="16"
-                                     BindableLayout.ItemsSource="{Binding VisibleCards}" />
+                <!-- Cards; each one's view comes from its AddInsightCard registration.
+                     Widths are set in code-behind so they form even columns. -->
+                <FlexLayout x:Name="Cards"
+                            Direction="Row"
+                            Wrap="Wrap"
+                            AlignItems="Start"
+                            AlignContent="Start"
+                            BindableLayout.ItemsSource="{Binding VisibleCards}" />
 
             </VerticalStackLayout>
 
