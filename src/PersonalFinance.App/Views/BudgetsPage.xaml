@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PersonalFinance.App.ViewModels"
+             x:Class="PersonalFinance.App.Views.BudgetsPage"
+             x:DataType="vm:BudgetsViewModel"
+             x:Name="Page"
+             Title="Budgets">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,32" Spacing="16" MaximumWidthRequest="720">
+            <Label Text="Monthly budgets" Style="{StaticResource Headline}" />
+            <Label Text="Each category starts with a limit suggested from your last three months. Set your own and it stays until you reset it."
+                   TextColor="{StaticResource TextMuted}" />
+
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" />
+            <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" IsVisible="{Binding HasError}" />
+
+            <VerticalStackLayout Spacing="12" BindableLayout.ItemsSource="{Binding Items}">
+                <BindableLayout.EmptyView>
+                    <Label Text="No spending categories yet - budgets appear once you have some spending."
+                           Style="{StaticResource Caption}" />
+                </BindableLayout.EmptyView>
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BudgetItem">
+                        <Border Style="{StaticResource Card}" Padding="16">
+                            <VerticalStackLayout Spacing="10">
+                                <Grid ColumnDefinitions="*, Auto">
+                                    <Label Text="{Binding Name}" Style="{StaticResource SubHeadline}" />
+                                    <Label Grid.Column="1" Text="{Binding Status}" Style="{StaticResource Eyebrow}" VerticalOptions="Center">
+                                        <Label.Triggers>
+                                            <DataTrigger TargetType="Label" Binding="{Binding IsSuggested}" Value="False">
+                                                <Setter Property="TextColor" Value="{StaticResource Torii}" />
+                                            </DataTrigger>
+                                        </Label.Triggers>
+                                    </Label>
+                                </Grid>
+                                <Label Text="{Binding SuggestionText}" Style="{StaticResource Caption}" />
+                                <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="8">
+                                    <Border Padding="10,0" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                                        <Entry Text="{Binding LimitText}"
+                                               Keyboard="Numeric"
+                                               Placeholder="Monthly limit"
+                                               SemanticProperties.Description="{Binding Name, StringFormat='Monthly limit for {0}'}" />
+                                    </Border>
+                                    <Button Grid.Column="1"
+                                            Text="Save"
+                                            Command="{Binding Source={x:Reference Page}, Path=BindingContext.SaveCommand, x:DataType=ContentPage}"
+                                            CommandParameter="{Binding .}" />
+                                    <Button Grid.Column="2"
+                                            Text="Use suggestion"
+                                            Style="{StaticResource GhostButton}"
+                                            IsVisible="{Binding IsSaved}"
+                                            Command="{Binding Source={x:Reference Page}, Path=BindingContext.UseSuggestionCommand, x:DataType=ContentPage}"
+                                            CommandParameter="{Binding .}" />
+                                </Grid>
+                                <Label Text="{Binding Error}" Style="{StaticResource ErrorText}" FontSize="12" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

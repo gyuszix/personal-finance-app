@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.BudgetVariance"
+             x:Class="PersonalFinance.App.Insights.Cards.BudgetVariance.BudgetVarianceCardView"
+             x:DataType="card:BudgetVarianceCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="16">
+        <Grid ColumnDefinitions="*, Auto">
+            <VerticalStackLayout Spacing="2">
+                <Label Text="{Binding Headline}" Style="{StaticResource SubHeadline}" />
+                <Label Text="{Binding Summary}" Style="{StaticResource Caption}" />
+            </VerticalStackLayout>
+            <Button Grid.Column="1"
+                    Text="Edit"
+                    Style="{StaticResource GhostButton}"
+                    VerticalOptions="Start"
+                    Command="{Binding EditBudgetsCommand}" />
+        </Grid>
+
+        <VerticalStackLayout Spacing="14" BindableLayout.ItemsSource="{Binding Rows}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="card:BudgetRow">
+                    <VerticalStackLayout Spacing="6">
+                        <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10">
+                            <Label Text="{Binding Name}" />
+                            <Label Grid.Column="1" Text="{Binding Amounts}" />
+                        </Grid>
+                        <Grid HeightRequest="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="{Binding Used}" />
+                                <ColumnDefinition Width="{Binding Rest}" />
+                            </Grid.ColumnDefinitions>
+                            <BoxView Grid.ColumnSpan="2" Color="{StaticResource SurfaceRaised}" CornerRadius="3" />
+                            <BoxView Color="{StaticResource Neon}" CornerRadius="3">
+                                <BoxView.Triggers>
+                                    <DataTrigger TargetType="BoxView" Binding="{Binding IsOver}" Value="True">
+                                        <Setter Property="Color" Value="{StaticResource Torii}" />
+                                    </DataTrigger>
+                                </BoxView.Triggers>
+                            </BoxView>
+                        </Grid>
+                        <Label Text="{Binding Remaining}" Style="{StaticResource Caption}">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding IsOver}" Value="True">
+                                    <Setter Property="TextColor" Value="{StaticResource Negative}" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </VerticalStackLayout>
+
+        <Label Text="· suggested from your last three months - tap Edit to set your own."
+               Style="{StaticResource Caption}"
+               IsVisible="{Binding HasSuggestions}" />
+    </VerticalStackLayout>
+
+</ContentView>

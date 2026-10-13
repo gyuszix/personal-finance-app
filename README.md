@@ -113,6 +113,7 @@ money out, a negative amount is money in. Income is take-home pay.
 | Card | Tab | Definition |
 |---|---|---|
 | Spending by category | Spending | The month's spending per Plaid category. Donut of the top 5 plus "Other", total in the centre |
+| Budgets | Spending | Spent vs limit per category this month, most over first. The limit is the one you set on the Budgets page (Edit), or until then a suggestion: average monthly spend over the burn rate's three-month window, rounded up to the next 10. Limits must be 0–1,000,000 and can only be set on spending categories (not income or transfers) |
 | Credit vs debit | Spending | The month's spending from credit card accounts vs bank (depository) accounts, with the average purchase on each. Spending from loan or investment accounts is in neither |
 | Credit share over time | Spending | Credit ÷ (credit + debit) per month over 12 months. A month with no spending is a gap, not 0% |
 | Credit vs debit by category | Spending | Per category, credit vs debit for the month, bars scaled to the largest category |

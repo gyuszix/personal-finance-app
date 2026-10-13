@@ -2,6 +2,7 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.App.Insights;
+using PersonalFinance.App.Insights.Cards.BudgetVariance;
 using PersonalFinance.App.Insights.Cards.BurnRate;
 using PersonalFinance.App.Insights.Cards.CardPayoff;
 using PersonalFinance.App.Insights.Cards.CashflowTrend;
@@ -72,6 +73,7 @@ public static class MauiProgram
         // Dashboard cards, in display order within each tab. A new card is
         // one line here - see README "Adding a Dashboard card".
         builder.Services.AddInsightCard<SpendingByCategoryCard, SpendingByCategoryCardView>();
+        builder.Services.AddInsightCard<BudgetVarianceCard, BudgetVarianceCardView>();
         builder.Services.AddInsightCard<CreditDebitSplitCard, CreditDebitSplitCardView>();
         builder.Services.AddInsightCard<CreditShareTrendCard, CreditShareTrendCardView>();
         builder.Services.AddInsightCard<CreditDebitByCategoryCard, CreditDebitByCategoryCardView>();
@@ -99,12 +101,14 @@ public static class MauiProgram
         builder.Services.AddTransient<TransactionsViewModel>();
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<AccountsViewModel>();
+        builder.Services.AddTransient<BudgetsViewModel>();
 
         // Views
         builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<TransactionsPage>();
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<AccountsPage>();
+        builder.Services.AddTransient<BudgetsPage>();
 
 		//Regiester ViewModel
 		builder.Services.AddTransient<RegisterViewModel>();
