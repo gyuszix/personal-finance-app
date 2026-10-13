@@ -41,6 +41,7 @@ public static class AccountEndpoints
                     AccountId = a.AccountId,
                     BankName = a.BankName,
                     AccountType = a.AccountType,
+                    Subtype = a.Subtype,
                     Balance = a.Balance,
                     Classification = ClassifyAccount(a.AccountType)
                 })

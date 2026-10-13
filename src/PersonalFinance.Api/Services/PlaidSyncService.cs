@@ -165,7 +165,11 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
     foreach (var plaidAccount in balanceResponse.Accounts)
     {
       if (accountsByPlaidId.TryGetValue(plaidAccount.AccountId, out var account))
+      {
         account.Balance = (decimal)(plaidAccount.Balances.Current ?? 0);
+        // Also backfills accounts linked before the subtype was stored.
+        account.Subtype = plaidAccount.Subtype?.ToString();
+      }
     }
 
     foreach (var account in itemAccounts)
