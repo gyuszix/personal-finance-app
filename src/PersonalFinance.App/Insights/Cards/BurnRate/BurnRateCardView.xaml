@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.BurnRate"
+             x:Class="PersonalFinance.App.Insights.Cards.BurnRate.BurnRateCardView"
+             x:DataType="card:BurnRateCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="14">
+        <VerticalStackLayout Spacing="2">
+            <Label Text="{Binding BurnText}" Style="{StaticResource Figure}" />
+            <Label Text="{Binding WindowText}" Style="{StaticResource Caption}" />
+        </VerticalStackLayout>
+
+        <BoxView HeightRequest="1" />
+
+        <VerticalStackLayout Spacing="8">
+            <HorizontalStackLayout Spacing="8">
+                <Label Text="{Binding PaceText}" FontSize="20" FontFamily="OpenSansSemibold" TextColor="{StaticResource Positive}">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding IsOverPace}" Value="True">
+                            <Setter Property="TextColor" Value="{StaticResource Warning}" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+                <Label Text="of your usual month" Style="{StaticResource Caption}" VerticalOptions="End" Margin="0,0,0,3" />
+            </HorizontalStackLayout>
+            <ProgressBar Progress="{Binding Progress}" ProgressColor="{StaticResource Neon}">
+                <ProgressBar.Triggers>
+                    <DataTrigger TargetType="ProgressBar" Binding="{Binding IsOverPace}" Value="True">
+                        <Setter Property="ProgressColor" Value="{StaticResource Warning}" />
+                    </DataTrigger>
+                </ProgressBar.Triggers>
+            </ProgressBar>
+            <Label Text="{Binding PaceDetail}" Style="{StaticResource Caption}" />
+        </VerticalStackLayout>
+    </VerticalStackLayout>
+
+</ContentView>

@@ -11,6 +11,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Burn rate card on the Cash Flow tab: average monthly spending over the
+  last three complete months, and how this month is pacing against it
+  (#92)
 - Savings rate card on the Savings tab: the share of take-home pay kept
   this month, with twelve months of saved (neon) and overspent (torii)
   bars. "—" with no income (#91)

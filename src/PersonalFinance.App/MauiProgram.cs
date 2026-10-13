@@ -2,6 +2,7 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.App.Insights;
+using PersonalFinance.App.Insights.Cards.BurnRate;
 using PersonalFinance.App.Insights.Cards.CardPayoff;
 using PersonalFinance.App.Insights.Cards.CashflowTrend;
 using PersonalFinance.App.Insights.Cards.CreditDebitByCategory;
@@ -73,6 +74,7 @@ public static class MauiProgram
         builder.Services.AddInsightCard<CreditDebitByCategoryCard, CreditDebitByCategoryCardView>();
         builder.Services.AddInsightCard<CardPayoffCard, CardPayoffCardView>();
         builder.Services.AddInsightCard<CashflowTrendCard, CashflowTrendCardView>();
+        builder.Services.AddInsightCard<BurnRateCard, BurnRateCardView>();
         builder.Services.AddInsightCard<SavingsRateCard, SavingsRateCardView>();
         builder.Services.AddInsightCard<NetWorthCard, NetWorthCardView>();
         builder.Services.AddSingleton<InsightCardTemplateSelector>();
