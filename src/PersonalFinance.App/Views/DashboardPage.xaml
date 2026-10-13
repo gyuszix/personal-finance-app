@@ -4,103 +4,95 @@
              xmlns:vm="clr-namespace:PersonalFinance.App.ViewModels"
              x:Class="PersonalFinance.App.Views.DashboardPage"
              x:DataType="vm:DashboardViewModel"
+             x:Name="Page"
              Title="Dashboard">
 
-    <Grid RowDefinitions="Auto, Auto, *">
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,32"
+                             Spacing="20"
+                             MaximumWidthRequest="720">
 
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Padding="20,16,20,0">
-            <Label Grid.Column="0"
-                   Text="Dashboard"
-                   Style="{StaticResource Headline}"
-                   VerticalOptions="Center" />
-            <Button Grid.Column="1"
-                    Text="Refresh"
-                    Style="{StaticResource GhostButton}"
-                    Command="{Binding LoadDashboardCommand}"
-                    IsEnabled="{Binding IsNotLoading}" />
-        </Grid>
+            <Grid ColumnDefinitions="*, Auto">
+                <Label Text="Dashboard"
+                       Style="{StaticResource Headline}"
+                       VerticalOptions="Center" />
+                <Button Grid.Column="1"
+                        Text="Refresh"
+                        Style="{StaticResource GhostButton}"
+                        Command="{Binding LoadDashboardCommand}"
+                        IsEnabled="{Binding IsNotLoading}" />
+            </Grid>
 
-        <ActivityIndicator Grid.Row="1"
-                           IsRunning="{Binding IsLoading}"
-                           IsVisible="{Binding IsLoading}" />
+            <Label Text="{Binding ErrorMessage}"
+                   Style="{StaticResource ErrorText}"
+                   IsVisible="{Binding HasError}" />
 
-        <ScrollView Grid.Row="2">
-            <VerticalStackLayout Padding="20" Spacing="24">
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                               IsVisible="{Binding IsLoading}" />
 
-                <Label Text="{Binding ErrorMessage}"
-                       Style="{StaticResource ErrorText}"
-                       IsVisible="{Binding HasError}" />
-
-                <!-- First-run state: nothing linked yet, so the figures below
-                     would all read $0.00 and look like a failed load. -->
-                <VerticalStackLayout Spacing="12"
-                                     IsVisible="{Binding HasNoAccounts}">
-                    <Label Text="No accounts linked yet"
-                           Style="{StaticResource Headline}" />
-                    <Label Text="Connect a bank to import your balances and transactions." />
+            <!-- First-run state: nothing linked, so every card would be empty. -->
+            <Border Style="{StaticResource Card}" IsVisible="{Binding HasNoAccounts}">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="No accounts linked yet" Style="{StaticResource SubHeadline}" />
+                    <Label Text="Connect a bank to import your balances and transactions."
+                           TextColor="{StaticResource TextMuted}" />
                     <Button Text="Connect a bank"
                             HorizontalOptions="Start"
                             Command="{Binding GoToAccountsCommand}" />
                 </VerticalStackLayout>
+            </Border>
 
-                <VerticalStackLayout Spacing="24" IsVisible="{Binding HasAccounts}">
+            <VerticalStackLayout Spacing="20" IsVisible="{Binding HasAccounts}">
 
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Net Worth" Style="{StaticResource Headline}" />
-                        <Label Text="{Binding NetWorth, StringFormat='{0:C}'}" FontSize="32" />
-                    </VerticalStackLayout>
+                <!-- Month: shared by every card that's per month -->
+                <Grid ColumnDefinitions="Auto, *, Auto">
+                    <Button Text="‹"
+                            Style="{StaticResource IconButton}"
+                            SemanticProperties.Description="Previous month"
+                            Command="{Binding PreviousMonthCommand}" />
+                    <Label Grid.Column="1"
+                           Text="{Binding MonthLabel}"
+                           Style="{StaticResource SubHeadline}"
+                           HorizontalTextAlignment="Center"
+                           VerticalOptions="Center" />
+                    <Button Grid.Column="2"
+                            Text="›"
+                            Style="{StaticResource IconButton}"
+                            SemanticProperties.Description="Next month"
+                            Command="{Binding NextMonthCommand}"
+                            IsEnabled="{Binding CanGoToNextMonth}" />
+                </Grid>
 
-                    <Grid ColumnDefinitions="*, *" ColumnSpacing="16">
-                        <VerticalStackLayout Grid.Column="0" Spacing="4">
-                            <Label Text="Total Assets" FontAttributes="Bold" />
-                            <Label Text="{Binding TotalAssets, StringFormat='{0:C}'}" />
-                        </VerticalStackLayout>
-                        <VerticalStackLayout Grid.Column="1" Spacing="4">
-                            <Label Text="Total Liabilities" FontAttributes="Bold" />
-                            <Label Text="{Binding TotalLiabilities, StringFormat='{0:C}'}" />
-                        </VerticalStackLayout>
-                    </Grid>
+                <!-- Tabs -->
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                    <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Tabs}">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:InsightTab">
+                                <Button Text="{Binding Name}"
+                                        Style="{StaticResource TabButton}"
+                                        Command="{Binding Source={x:Reference Page}, Path=BindingContext.SelectTabCommand, x:DataType=ContentPage}"
+                                        CommandParameter="{Binding .}">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                            <Setter Property="BackgroundColor" Value="{StaticResource ToriiSoft}" />
+                                            <Setter Property="TextColor" Value="{StaticResource Torii}" />
+                                            <Setter Property="BorderColor" Value="{StaticResource Torii}" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </HorizontalStackLayout>
+                </ScrollView>
 
-                    <VerticalStackLayout Spacing="8">
-                        <Grid ColumnDefinitions="Auto, *, Auto" ColumnSpacing="8">
-                            <Button Grid.Column="0"
-                                    Text="‹"
-                                    Style="{StaticResource IconButton}"
-                                    SemanticProperties.Description="Previous month"
-                                    Command="{Binding PreviousMonthCommand}" />
-                            <Label Grid.Column="1"
-                                   Text="{Binding MonthLabel}"
-                                   Style="{StaticResource Headline}"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalOptions="Center" />
-                            <Button Grid.Column="2"
-                                    Text="›"
-                                    Style="{StaticResource IconButton}"
-                                    SemanticProperties.Description="Next month"
-                                    Command="{Binding NextMonthCommand}"
-                                    IsEnabled="{Binding CanGoToNextMonth}" />
-                        </Grid>
-                        <Grid ColumnDefinitions="*, *, *" ColumnSpacing="16">
-                            <VerticalStackLayout Grid.Column="0" Spacing="4">
-                                <Label Text="Income" FontAttributes="Bold" />
-                                <Label Text="{Binding Income, StringFormat='{0:C}'}" />
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="1" Spacing="4">
-                                <Label Text="Expenses" FontAttributes="Bold" />
-                                <Label Text="{Binding Expenses, StringFormat='{0:C}'}" />
-                            </VerticalStackLayout>
-                            <VerticalStackLayout Grid.Column="2" Spacing="4">
-                                <Label Text="Net" FontAttributes="Bold" />
-                                <Label Text="{Binding Net, StringFormat='{0:C}'}" />
-                            </VerticalStackLayout>
-                        </Grid>
-                    </VerticalStackLayout>
-
-                </VerticalStackLayout>
+                <!-- Cards; each one's view comes from its AddInsightCard registration -->
+                <VerticalStackLayout x:Name="Cards"
+                                     Spacing="16"
+                                     BindableLayout.ItemsSource="{Binding VisibleCards}" />
 
             </VerticalStackLayout>
-        </ScrollView>
 
-    </Grid>
+        </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>

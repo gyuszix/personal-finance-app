@@ -1,10 +1,16 @@
 ﻿using System.Text.Json;
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
+using PersonalFinance.App.Insights;
+using PersonalFinance.App.Insights.Cards.CashflowTrend;
+using PersonalFinance.App.Insights.Cards.NetWorth;
+using PersonalFinance.App.Insights.Cards.SpendingByCategory;
 using PersonalFinance.App.Services;
 using PersonalFinance.App.ViewModels;
 using PersonalFinance.App.Views;
+using LiveChartsCore.SkiaSharpView.Maui;
 using Refit;
+using SkiaSharp.Views.Maui.Controls.Hosting;
 
 namespace PersonalFinance.App;
 
@@ -16,6 +22,8 @@ public static class MauiProgram
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
+            .UseSkiaSharp()
+            .UseLiveCharts()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -46,6 +54,18 @@ public static class MauiProgram
             .AddHttpMessageHandler<AuthRefreshHandler>();
 
         builder.Services.AddSingleton<ApiService>();
+
+        // GET /insights/{key}, through the same auth handler as the Refit client
+        builder.Services
+            .AddHttpClient<InsightClient>(c => c.BaseAddress = new Uri(ApiConfig.BaseUrl))
+            .AddHttpMessageHandler<AuthRefreshHandler>();
+
+        // Dashboard cards, in display order within each tab. A new card is
+        // one line here - see README "Adding a Dashboard card".
+        builder.Services.AddInsightCard<SpendingByCategoryCard, SpendingByCategoryCardView>();
+        builder.Services.AddInsightCard<CashflowTrendCard, CashflowTrendCardView>();
+        builder.Services.AddInsightCard<NetWorthCard, NetWorthCardView>();
+        builder.Services.AddSingleton<InsightCardTemplateSelector>();
 
         // Live "sync completed" pushes from the API, for the signed-in session
         builder.Services.AddSingleton<SyncHubService>();

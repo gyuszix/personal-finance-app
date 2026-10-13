@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:insights="clr-namespace:PersonalFinance.App.Insights">
+
+    <!--
+        The frame every Dashboard card shares: title, loading, error and empty
+        states. A card's view sets ControlTemplate to this and supplies only
+        its content, which shows once there's data.
+    -->
+    <ControlTemplate x:Key="InsightCardTemplate">
+        <Border Style="{StaticResource Card}" x:DataType="insights:InsightCardViewModel">
+            <VerticalStackLayout Spacing="14">
+                <Grid ColumnDefinitions="*, Auto">
+                    <Label Text="{Binding Title}"
+                           Style="{StaticResource Eyebrow}"
+                           VerticalOptions="Center" />
+                    <ActivityIndicator Grid.Column="1"
+                                       IsRunning="{Binding IsLoading}"
+                                       IsVisible="{Binding IsLoading}"
+                                       HeightRequest="16"
+                                       WidthRequest="16" />
+                </Grid>
+                <Label Text="Couldn't load this. Tap Refresh to try again."
+                       Style="{StaticResource ErrorText}"
+                       IsVisible="{Binding HasError}" />
+                <Label Text="{Binding EmptyMessage}"
+                       Style="{StaticResource Caption}"
+                       IsVisible="{Binding IsEmpty}" />
+                <ContentPresenter IsVisible="{Binding HasData}" />
+            </VerticalStackLayout>
+        </Border>
+    </ControlTemplate>
+
+</ResourceDictionary>

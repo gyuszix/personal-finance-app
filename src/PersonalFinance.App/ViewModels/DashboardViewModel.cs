@@ -1,23 +1,38 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using PersonalFinance.App.Insights;
 using PersonalFinance.App.Services;
 
 namespace PersonalFinance.App.ViewModels;
 
+// The Dashboard is a set of insight cards grouped into tabs (#85). This
+// owns the month, the tabs and the first-run state. Each card loads itself.
 public partial class DashboardViewModel : ObservableObject
 {
     private readonly ApiService _apiService;
+    private readonly IReadOnlyList<InsightCardViewModel> _cards;
 
-    public DashboardViewModel(ApiService apiService)
+    public DashboardViewModel(ApiService apiService, IEnumerable<InsightCardViewModel> cards)
     {
         _apiService = apiService;
+        _cards = cards.ToList();
 
-        // A background sync landed - balances and cashflow may have moved.
+        Tabs = new ObservableCollection<InsightTab>(
+            _cards.Select(c => c.Group).Distinct().Order().Select(g => new InsightTab(g)));
+        if (Tabs.Count > 0) SelectTab(Tabs[0]);
+
+        // A background sync landed - every card may have moved.
         WeakReferenceMessenger.Default.Register<DashboardViewModel, SyncCompletedMessage>(this,
             (vm, _) => MainThread.BeginInvokeOnMainThread(() => vm.LoadDashboardCommand.Execute(null)));
     }
+
+    public ObservableCollection<InsightTab> Tabs { get; }
+
+    [ObservableProperty]
+    private IReadOnlyList<InsightCardViewModel> visibleCards = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotLoading))]
@@ -33,25 +48,16 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty]
     private bool hasError;
 
-    // A user with no linked accounts would otherwise just see a wall of
-    // $0.00, which is indistinguishable from a failed load.
+    // A user with no linked accounts would otherwise see a column of empty
+    // cards, with nothing pointing at "Connect a bank".
     [ObservableProperty]
     private bool hasNoAccounts;
 
     [ObservableProperty]
     private bool hasAccounts;
 
-    [ObservableProperty]
-    private decimal netWorth;
-
-    [ObservableProperty]
-    private decimal totalAssets;
-
-    [ObservableProperty]
-    private decimal totalLiabilities;
-
-    // First day of the month the cash flow section shows. Starts on the
-    // current month; the user can step back through history (#63).
+    // First day of the month the cards show. Starts on the current month;
+    // the user can step back through history (#63).
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(MonthLabel))]
     [NotifyPropertyChangedFor(nameof(CanGoToNextMonth))]
@@ -61,60 +67,45 @@ public partial class DashboardViewModel : ObservableObject
         ? "This Month"
         : SelectedMonth.ToString("MMMM yyyy", CultureInfo.CurrentCulture);
 
-    // There's no cash flow in the future to show.
+    // There's nothing in the future to show.
     public bool CanGoToNextMonth => SelectedMonth < StartOfMonth(DateTime.Today);
-
-    [ObservableProperty]
-    private decimal income;
-
-    [ObservableProperty]
-    private decimal expenses;
-
-    [ObservableProperty]
-    private decimal net;
 
     [RelayCommand]
     public async Task LoadDashboardAsync()
     {
         IsLoading = true;
-        ErrorMessage = string.Empty;
         HasError = false;
 
-        var summaryTask = _apiService.GetAccountsSummaryAsync();
-        var cashflowTask = _apiService.GetCashflowAsync(SelectedMonth);
-        await Task.WhenAll(summaryTask, cashflowTask);
-
-        var summary = summaryTask.Result;
-        var cashflow = cashflowTask.Result;
-
-        if (summary == null || cashflow == null)
+        var summary = await _apiService.GetAccountsSummaryAsync();
+        if (summary == null)
         {
-            ErrorMessage = "Couldn't load dashboard data. Tap Refresh to try again.";
+            ErrorMessage = "Couldn't reach the server. Tap Refresh to try again.";
             HasError = true;
             HasNoAccounts = false;
             HasAccounts = false;
         }
         else
         {
-            NetWorth = summary.NetWorth;
-            TotalAssets = summary.TotalAssets;
-            TotalLiabilities = summary.TotalLiabilities;
-            Income = cashflow.Income;
-            Expenses = cashflow.Expenses;
-            Net = cashflow.Net;
-
             HasNoAccounts = summary.Accounts.Count == 0;
             HasAccounts = !HasNoAccounts;
+            if (HasAccounts) await LoadCardsAsync();
         }
 
         IsLoading = false;
     }
 
     [RelayCommand]
+    private void SelectTab(InsightTab tab)
+    {
+        foreach (var t in Tabs) t.IsSelected = t == tab;
+        VisibleCards = _cards.Where(c => c.Group == tab.Group).ToList();
+    }
+
+    [RelayCommand]
     private async Task PreviousMonthAsync()
     {
         SelectedMonth = SelectedMonth.AddMonths(-1);
-        await LoadCashflowAsync();
+        await LoadCardsAsync();
     }
 
     [RelayCommand]
@@ -122,29 +113,14 @@ public partial class DashboardViewModel : ObservableObject
     {
         if (!CanGoToNextMonth) return;
         SelectedMonth = SelectedMonth.AddMonths(1);
-        await LoadCashflowAsync();
+        await LoadCardsAsync();
     }
 
-    // Changing month only changes the cash flow - no need to reload balances.
-    private async Task LoadCashflowAsync()
+    // Every card, not just the visible tab's, so switching tabs is instant.
+    private Task LoadCardsAsync()
     {
         var month = SelectedMonth;
-        var cashflow = await _apiService.GetCashflowAsync(month);
-
-        // The user may have stepped again while this was in flight.
-        if (month != SelectedMonth) return;
-
-        if (cashflow == null)
-        {
-            ErrorMessage = "Couldn't load that month. Tap Refresh to try again.";
-            HasError = true;
-            return;
-        }
-
-        HasError = false;
-        Income = cashflow.Income;
-        Expenses = cashflow.Expenses;
-        Net = cashflow.Net;
+        return Task.WhenAll(_cards.Select(c => c.LoadAsync(month)));
     }
 
     private static DateTime StartOfMonth(DateTime date) => new(date.Year, date.Month, 1);
@@ -154,4 +130,13 @@ public partial class DashboardViewModel : ObservableObject
     {
         await Shell.Current.GoToAsync("//accounts");
     }
+}
+
+public partial class InsightTab(InsightGroup group) : ObservableObject
+{
+    public InsightGroup Group { get; } = group;
+    public string Name { get; } = group.Display();
+
+    [ObservableProperty]
+    private bool isSelected;
 }

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.SpendingByCategory"
+             x:Class="PersonalFinance.App.Insights.Cards.SpendingByCategory.SpendingByCategoryCardView"
+             x:DataType="card:SpendingByCategoryCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="20">
+        <Grid HeightRequest="240">
+            <lvc:PieChart Series="{Binding Series}"
+                          InitialRotation="-90"
+                          LegendPosition="Hidden"
+                          BackgroundColor="Transparent" />
+            <VerticalStackLayout HorizontalOptions="Center"
+                                 VerticalOptions="Center"
+                                 InputTransparent="True">
+                <Label Text="{Binding TotalText}"
+                       Style="{StaticResource Figure}"
+                       HorizontalTextAlignment="Center" />
+                <Label Text="spent"
+                       Style="{StaticResource Caption}"
+                       HorizontalTextAlignment="Center" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Legend}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="card:DonutSlice">
+                    <Grid ColumnDefinitions="Auto, *, Auto, 48" ColumnSpacing="12">
+                        <BoxView Color="{Binding Color}"
+                                 WidthRequest="10"
+                                 HeightRequest="10"
+                                 CornerRadius="5"
+                                 VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding Name}" VerticalOptions="Center" />
+                        <Label Grid.Column="2" Text="{Binding Amount}" VerticalOptions="Center" />
+                        <Label Grid.Column="3"
+                               Text="{Binding Share}"
+                               Style="{StaticResource Caption}"
+                               HorizontalTextAlignment="End"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </VerticalStackLayout>
+    </VerticalStackLayout>
+
+</ContentView>

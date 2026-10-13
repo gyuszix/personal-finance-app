@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Dashboard is now cards in tabs with charts (LiveCharts2): spending by
+  category as a donut (top 5 + Other), net cash flow with 12 months of
+  income vs spending bars, and net worth. Each card loads and fails on
+  its own. Server side, each metric is an `IInsight` served at
+  `GET /insights/{key}?month=yyyy-MM`, which requires sign-in, checks the
+  month is between 2000-01 and the current month, and caches per user
+  until the next sync. README explains how to add a card (#85)
 - Dark theme: black with torii vermilion and neon blue accents, plus
   orange and blue. Replaces the MAUI template's purple. Every colour is a
   named token in `Colors.xaml`, and the views no longer hardcode any.
