@@ -11,6 +11,11 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Credit vs debit cards on the Spending tab: the month's split with the
+  average purchase on each, credit's share over 12 months, the split per
+  category, and card payoff (payments ÷ credit spending, each payment
+  counted once even when both the bank and card ends are linked). Four new
+  `/insights` endpoints (#87)
 - Dashboard is now cards in tabs with charts (LiveCharts2): spending by
   category as a donut (top 5 + Other), net cash flow with 12 months of
   income vs spending bars, and net worth. Each card loads and fails on

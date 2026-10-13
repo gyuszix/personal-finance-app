@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.CreditDebitByCategory"
+             x:Class="PersonalFinance.App.Insights.Cards.CreditDebitByCategory.CreditDebitByCategoryCardView"
+             x:DataType="card:CreditDebitByCategoryCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="16">
+        <HorizontalStackLayout Spacing="16">
+            <HorizontalStackLayout Spacing="6">
+                <BoxView Color="{StaticResource Torii}" WidthRequest="8" HeightRequest="8" CornerRadius="4" VerticalOptions="Center" />
+                <Label Text="Credit" Style="{StaticResource Caption}" />
+            </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="6">
+                <BoxView Color="{StaticResource Neon}" WidthRequest="8" HeightRequest="8" CornerRadius="4" VerticalOptions="Center" />
+                <Label Text="Debit" Style="{StaticResource Caption}" />
+            </HorizontalStackLayout>
+        </HorizontalStackLayout>
+
+        <VerticalStackLayout Spacing="14" BindableLayout.ItemsSource="{Binding Bars}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="card:MethodBar">
+                    <VerticalStackLayout Spacing="6">
+                        <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="10">
+                            <Label Text="{Binding Name}" />
+                            <Label Grid.Column="1" Text="{Binding Total}" />
+                            <Label Grid.Column="2"
+                                   Text="{Binding CreditShare}"
+                                   Style="{StaticResource Caption}"
+                                   WidthRequest="72"
+                                   HorizontalTextAlignment="End"
+                                   VerticalOptions="Center" />
+                        </Grid>
+                        <Grid HeightRequest="8" ColumnSpacing="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="{Binding Credit}" />
+                                <ColumnDefinition Width="{Binding Debit}" />
+                                <ColumnDefinition Width="{Binding Rest}" />
+                            </Grid.ColumnDefinitions>
+                            <BoxView Color="{StaticResource Torii}" CornerRadius="4" />
+                            <BoxView Grid.Column="1" Color="{StaticResource Neon}" CornerRadius="4" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </VerticalStackLayout>
+    </VerticalStackLayout>
+
+</ContentView>

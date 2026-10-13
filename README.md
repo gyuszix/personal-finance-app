@@ -113,6 +113,10 @@ money out, a negative amount is money in. Income is take-home pay.
 | Card | Tab | Definition |
 |---|---|---|
 | Spending by category | Spending | The month's spending per Plaid category. Donut of the top 5 plus "Other", total in the centre |
+| Credit vs debit | Spending | The month's spending from credit card accounts vs bank (depository) accounts, with the average purchase on each. Spending from loan or investment accounts is in neither |
+| Credit share over time | Spending | Credit ÷ (credit + debit) per month over 12 months. A month with no spending is a gap, not 0% |
+| Credit vs debit by category | Spending | Per category, credit vs debit for the month, bars scaled to the largest category |
+| Card payoff | Spending | Card payments ÷ credit spending. A payment appears twice when both ends are linked, so the bank side is used, falling back to the card side when there's no bank side. 100% or more = paid in full |
 | Net cash flow | Cash Flow | Income − spending for the month, over 12 months of income vs spending bars |
 | Net worth | Net Worth | Assets (depository, investment) − liabilities (credit, loan), today |
 
