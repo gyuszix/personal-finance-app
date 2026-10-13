@@ -8,6 +8,7 @@ using PersonalFinance.App.Insights.Cards.CreditDebitByCategory;
 using PersonalFinance.App.Insights.Cards.CreditDebitSplit;
 using PersonalFinance.App.Insights.Cards.CreditShareTrend;
 using PersonalFinance.App.Insights.Cards.NetWorth;
+using PersonalFinance.App.Insights.Cards.SavingsRate;
 using PersonalFinance.App.Insights.Cards.SpendingByCategory;
 using PersonalFinance.App.Services;
 using PersonalFinance.App.ViewModels;
@@ -72,6 +73,7 @@ public static class MauiProgram
         builder.Services.AddInsightCard<CreditDebitByCategoryCard, CreditDebitByCategoryCardView>();
         builder.Services.AddInsightCard<CardPayoffCard, CardPayoffCardView>();
         builder.Services.AddInsightCard<CashflowTrendCard, CashflowTrendCardView>();
+        builder.Services.AddInsightCard<SavingsRateCard, SavingsRateCardView>();
         builder.Services.AddInsightCard<NetWorthCard, NetWorthCardView>();
         builder.Services.AddSingleton<InsightCardTemplateSelector>();
 

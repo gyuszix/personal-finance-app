@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Shared.DTOs.Insights;
 
@@ -15,39 +14,17 @@ public class CashflowTrendInsight(AppDbContext db) : IInsight<CashflowTrendRespo
 
     public async Task<CashflowTrendResponse> CalculateAsync(InsightMonth month, CancellationToken cancellationToken)
     {
-        var first = month.AddMonths(-(Months - 1));
-
-        var totals = await db.Transactions
-            .CountedInCashflow()
-            .Where(t => t.Date >= first.Start && t.Date < month.End)
-            .GroupBy(t => new { t.Date.Year, t.Date.Month })
-            .Select(g => new
-            {
-                g.Key.Year,
-                g.Key.Month,
-                Income = g.Where(t => t.Amount < 0).Sum(t => -t.Amount),
-                Expenses = g.Where(t => t.Amount > 0).Sum(t => t.Amount)
-            })
-            .ToListAsync(cancellationToken);
-
-        var byMonth = totals.ToDictionary(t => new InsightMonth(t.Year, t.Month));
+        var months = await MonthlyCashflow.ForAsync(db, month.AddMonths(-(Months - 1)), month, cancellationToken);
 
         return new CashflowTrendResponse
         {
-            Months = Enumerable.Range(0, Months)
-                .Select(i => first.AddMonths(i))
-                .Select(m =>
+            Months = months
+                .Select(m => new CashflowMonth
                 {
-                    byMonth.TryGetValue(m, out var t);
-                    var income = t?.Income ?? 0;
-                    var expenses = t?.Expenses ?? 0;
-                    return new CashflowMonth
-                    {
-                        Month = m.ToString(),
-                        Income = income,
-                        Expenses = expenses,
-                        Net = income - expenses
-                    };
+                    Month = m.Month.ToString(),
+                    Income = m.Income,
+                    Expenses = m.Spending,
+                    Net = m.Net
                 })
                 .ToList()
         };
