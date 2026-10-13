@@ -43,21 +43,21 @@ public static class AccountEndpoints
                     AccountType = a.AccountType,
                     Subtype = a.Subtype,
                     Balance = a.Balance,
-                    Classification = ClassifyAccount(a.AccountType)
+                    Classification = AccountClassification.Of(a.AccountType)
                 })
                 .ToList();
 
             var totalAssets = accountResponses
-                .Where(a => a.Classification == "Asset")
+                .Where(a => a.Classification == AccountClassification.Asset)
                 .Sum(a => a.Balance);
 
             var totalLiabilities = accountResponses
-                .Where(a => a.Classification == "Liability")
+                .Where(a => a.Classification == AccountClassification.Liability)
                 .Sum(a => a.Balance);
 
             logger.LogInformation(
-                "Returned accounts summary for user {UserId}: {AccountCount} accounts, netWorth {NetWorth}",
-                userId, accountResponses.Count, totalAssets - totalLiabilities);
+                "Returned accounts summary for user {UserId}: {AccountCount} accounts",
+                userId, accountResponses.Count);
 
             var response = new AccountsSummaryResponse
             {
@@ -137,16 +137,4 @@ public static class AccountEndpoints
             return Results.NoContent();
         }).RequireAuthorization();
     }
-
-    // Plaid's own account type classification - depository/investment
-    // accounts are assets, credit/loan accounts are liabilities (balance
-    // represents amount owed, not negative equity - see NetWorth calc above).
-    // Anything unrecognized is "Other" and deliberately excluded from both
-    // totals rather than guessed at.
-    private static string ClassifyAccount(string accountType) => accountType switch
-    {
-        "Depository" or "Investment" => "Asset",
-        "Credit" or "Loan" => "Liability",
-        _ => "Other"
-    };
 }
