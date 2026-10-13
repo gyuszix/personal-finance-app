@@ -11,6 +11,7 @@ using PersonalFinance.App.Insights.Cards.CreditShareTrend;
 using PersonalFinance.App.Insights.Cards.DebtToIncome;
 using PersonalFinance.App.Insights.Cards.EmergencyFund;
 using PersonalFinance.App.Insights.Cards.NetWorth;
+using PersonalFinance.App.Insights.Cards.NetWorthTrend;
 using PersonalFinance.App.Insights.Cards.SavingsRate;
 using PersonalFinance.App.Insights.Cards.SpendingByCategory;
 using PersonalFinance.App.Services;
@@ -81,6 +82,7 @@ public static class MauiProgram
         builder.Services.AddInsightCard<EmergencyFundCard, EmergencyFundCardView>();
         builder.Services.AddInsightCard<DebtToIncomeCard, DebtToIncomeCardView>();
         builder.Services.AddInsightCard<NetWorthCard, NetWorthCardView>();
+        builder.Services.AddInsightCard<NetWorthTrendCard, NetWorthTrendCardView>();
         builder.Services.AddSingleton<InsightCardTemplateSelector>();
 
         // Live "sync completed" pushes from the API, for the signed-in session

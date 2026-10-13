@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.Maui;assembly=LiveChartsCore.SkiaSharpView.Maui"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.NetWorthTrend"
+             x:Class="PersonalFinance.App.Insights.Cards.NetWorthTrend.NetWorthTrendCardView"
+             x:DataType="card:NetWorthTrendCard"
+             x:Name="Root"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="12">
+        <Grid ColumnDefinitions="*, Auto">
+            <VerticalStackLayout Spacing="2">
+                <Label Text="{Binding ChangeText}" Style="{StaticResource Figure}" TextColor="{StaticResource Positive}">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding IsChangeNegative}" Value="True">
+                            <Setter Property="TextColor" Value="{StaticResource Negative}" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+                <Label Text="{Binding RangeText}" Style="{StaticResource Caption}" />
+            </VerticalStackLayout>
+
+            <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Start"
+                                   BindableLayout.ItemsSource="{Binding Ranges}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="card:RangeOption">
+                        <Button Text="{Binding Name}"
+                                Style="{StaticResource TabButton}"
+                                Padding="10,4"
+                                Command="{Binding Source={x:Reference Root}, Path=BindingContext.SelectRangeCommand, x:DataType=ContentView}"
+                                CommandParameter="{Binding .}">
+                            <Button.Triggers>
+                                <DataTrigger TargetType="Button" Binding="{Binding IsSelected}" Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource NeonSoft}" />
+                                    <Setter Property="TextColor" Value="{StaticResource Neon}" />
+                                    <Setter Property="BorderColor" Value="{StaticResource Neon}" />
+                                </DataTrigger>
+                            </Button.Triggers>
+                        </Button>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </HorizontalStackLayout>
+        </Grid>
+
+        <lvc:CartesianChart Series="{Binding Series}"
+                            XAxes="{Binding XAxes}"
+                            YAxes="{Binding YAxes}"
+                            LegendPosition="Hidden"
+                            HeightRequest="200"
+                            BackgroundColor="Transparent" />
+    </VerticalStackLayout>
+
+</ContentView>

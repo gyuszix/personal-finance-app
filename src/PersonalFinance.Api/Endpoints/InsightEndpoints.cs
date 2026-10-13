@@ -24,6 +24,7 @@ public static class InsightEndpoints
         insights.MapInsight<BurnRateInsight, BurnRateResponse>();
         insights.MapInsight<EmergencyFundInsight, EmergencyFundResponse>();
         insights.MapInsight<DebtToIncomeInsight, DebtToIncomeResponse>();
+        insights.MapInsight<NetWorthTrendInsight, NetWorthTrendResponse>();
     }
 
     private static void MapInsight<TInsight, TResult>(this RouteGroupBuilder group)
