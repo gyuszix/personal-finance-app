@@ -109,6 +109,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- Dashboard uses the full window: cards flow into 1-3 even columns by
+  window width instead of a 720px centred strip, with larger figures,
+  card padding and charts (#107)
 - `/accounts/summary` no longer logs the user's net worth - logs carry
   IDs and counts only (#90)
 - `ApiConfig.BaseUrl` reads from the `PERSONALFINANCE_API_URL` environment

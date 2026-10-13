@@ -47,7 +47,7 @@
                             XAxes="{Binding XAxes}"
                             YAxes="{Binding YAxes}"
                             LegendPosition="Hidden"
-                            HeightRequest="200"
+                            HeightRequest="260"
                             BackgroundColor="Transparent" />
     </VerticalStackLayout>
 
