@@ -123,6 +123,7 @@ money out, a negative amount is money in. Income is take-home pay.
 | Emergency fund | Savings | Today's liquid cash (checking, savings, money market, cash management, PayPal, prepaid; CDs, HSAs and EBT excluded) ÷ the burn rate, in months. A depository account with no subtype yet counts as liquid |
 | Debt-to-income (take-home) | Debt | Monthly loan payments ÷ monthly take-home income, both averaged over the burn rate's three-month window. Income = money in categorised `INCOME`. Payments = `LOAN_PAYMENTS` out of bank or card accounts, excluding credit card payments. Reads higher than a lender's (gross-pay) DTI, so their thresholds aren't shown |
 | Net worth | Net Worth | Assets (depository, investment) − liabilities (credit, loan), today |
+| Net worth trend | Net Worth | Net worth per day from the daily balance snapshots, over 30 days, 90 days or a year. A day an account has no snapshot for carries its last balance forward. History only goes back to when snapshots began (#84) |
 
 A ratio with nothing to divide by (no income, no spending) shows "—", never
 0% or infinity.

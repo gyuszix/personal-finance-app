@@ -11,6 +11,8 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Net worth trend card on the Net Worth tab: net worth per day from the
+  balance snapshots, over 30 days, 90 days or a year (#93)
 - Debt-to-income card on a new Debt tab, measured against take-home pay
   from your deposits (no settings needed), with payments broken down by
   loan type. Credit card payments aren't counted as debt service (#89)
