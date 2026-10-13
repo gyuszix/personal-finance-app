@@ -10,7 +10,11 @@ public class InsightEndpointsTests(TestWebApplicationFactory factory) : IClassFi
 {
     private static readonly DateTime ThisMonth = new(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
 
-    public static TheoryData<string> Insights => ["spending-by-category", "cashflow-trend"];
+    public static TheoryData<string> Insights =>
+    [
+        "spending-by-category", "cashflow-trend",
+        "credit-debit-split", "credit-share-trend", "credit-debit-by-category", "card-payoff"
+    ];
 
     [Theory]
     [MemberData(nameof(Insights))]

@@ -2,7 +2,11 @@
 using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using PersonalFinance.App.Insights;
+using PersonalFinance.App.Insights.Cards.CardPayoff;
 using PersonalFinance.App.Insights.Cards.CashflowTrend;
+using PersonalFinance.App.Insights.Cards.CreditDebitByCategory;
+using PersonalFinance.App.Insights.Cards.CreditDebitSplit;
+using PersonalFinance.App.Insights.Cards.CreditShareTrend;
 using PersonalFinance.App.Insights.Cards.NetWorth;
 using PersonalFinance.App.Insights.Cards.SpendingByCategory;
 using PersonalFinance.App.Services;
@@ -63,6 +67,10 @@ public static class MauiProgram
         // Dashboard cards, in display order within each tab. A new card is
         // one line here - see README "Adding a Dashboard card".
         builder.Services.AddInsightCard<SpendingByCategoryCard, SpendingByCategoryCardView>();
+        builder.Services.AddInsightCard<CreditDebitSplitCard, CreditDebitSplitCardView>();
+        builder.Services.AddInsightCard<CreditShareTrendCard, CreditShareTrendCardView>();
+        builder.Services.AddInsightCard<CreditDebitByCategoryCard, CreditDebitByCategoryCardView>();
+        builder.Services.AddInsightCard<CardPayoffCard, CardPayoffCardView>();
         builder.Services.AddInsightCard<CashflowTrendCard, CashflowTrendCardView>();
         builder.Services.AddInsightCard<NetWorthCard, NetWorthCardView>();
         builder.Services.AddSingleton<InsightCardTemplateSelector>();
