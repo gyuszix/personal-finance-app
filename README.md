@@ -93,6 +93,32 @@ The key files aren't encrypted at rest - protect that directory like the
 database. Don't change the app's content root/application name without a
 plan either: that also makes existing tokens unreadable.
 
+## Theme
+
+Dark only: black, with torii vermilion and neon blue as the two accents, and
+orange and blue for further chart series. Every colour is a named token in
+[`Colors.xaml`](src/PersonalFinance.App/Resources/Styles/Colors.xaml). Views
+and charts use the keys, never hex values, so changing a colour is a single edit.
+
+| Token | Hex | Used for | Contrast on `Ink` |
+|---|---|---|---|
+| `Ink` | `#0B0C10` | page background | - |
+| `Surface` | `#15171D` | cards | - |
+| `SurfaceRaised` | `#1F222A` | inputs, selected tab | - |
+| `Hairline` | `#2C303A` | borders, gridlines | - |
+| `TextPrimary` | `#EEF0F3` | text | 17.1:1 |
+| `TextMuted` | `#8B919C` | secondary text | 6.2:1 |
+| `Torii` | `#F2542D` | brand, primary buttons, credit, negative | 5.7:1 |
+| `Neon` | `#1F8BFF` | data, secondary buttons, debit | 5.8:1 |
+| `NeonGlow` | `#5CC8FF` | highlights, positive | 10.4:1 |
+| `Orange` | `#FF9F1C` | third series, warnings | 9.5:1 |
+| `Blue` | `#3B5BFF` | fourth series (chart marks only, not text) | 3.8:1 |
+
+Shared styles in [`Styles.xaml`](src/PersonalFinance.App/Resources/Styles/Styles.xaml):
+`Headline`, `SubHeadline`, `Eyebrow` (small caps label), `Figure` (a card's
+big number), `Caption`, `ErrorText`, `Card` (a `Border`), and `GhostButton` /
+`IconButton` next to the default Torii button.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds and runs the

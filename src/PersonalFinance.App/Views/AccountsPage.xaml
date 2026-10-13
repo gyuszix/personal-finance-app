@@ -16,6 +16,7 @@
                    VerticalOptions="Center" />
             <Button Grid.Column="1"
                     Text="Refresh"
+                    Style="{StaticResource GhostButton}"
                     Command="{Binding LoadAccountsCommand}"
                     IsEnabled="{Binding IsNotLoading}" />
         </Grid>
@@ -23,7 +24,7 @@
         <Label Grid.Row="1"
                Text="{Binding ErrorMessage}"
                IsVisible="{Binding HasError}"
-               TextColor="Red"
+               Style="{StaticResource ErrorText}"
                Padding="20,6" />
 
         <ActivityIndicator Grid.Row="2"
@@ -48,13 +49,14 @@
                             <Label Text="{Binding BankName}" />
                             <Label Text="{Binding AccountType}"
                                    FontSize="12"
-                                   TextColor="Gray" />
+                                   TextColor="{StaticResource TextMuted}" />
                         </VerticalStackLayout>
                         <Label Grid.Column="1"
                                Text="{Binding Balance, StringFormat='{0:C}'}"
                                VerticalOptions="Center" />
                         <Button Grid.Column="2"
                                 Text="Unlink"
+                                Style="{StaticResource GhostButton}"
                                 VerticalOptions="Center"
                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:AccountsViewModel}}, Path=UnlinkAccountCommand, x:DataType=vm:AccountsViewModel}"
                                 CommandParameter="{Binding .}" />
@@ -75,7 +77,7 @@
                    HorizontalOptions="Center"
                    IsVisible="{Binding HasConnectBankStatus}" />
 
-            <Button Text="Log out"
+            <Button Text="Log out" Style="{StaticResource GhostButton}"
                     Command="{Binding LogoutCommand}" />
         </VerticalStackLayout>
 

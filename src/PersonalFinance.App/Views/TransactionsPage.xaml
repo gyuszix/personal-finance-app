@@ -16,6 +16,7 @@
                     SelectedItem="{Binding SelectedCategory}" />
             <Button Grid.Column="1"
                     Text="Refresh"
+                    Style="{StaticResource GhostButton}"
                     Command="{Binding LoadTransactionsCommand}"
                     IsEnabled="{Binding IsNotLoading}" />
         </Grid>
@@ -23,14 +24,14 @@
         <Label Grid.Row="1"
                Text="{Binding OfflineStatusText}"
                IsVisible="{Binding IsOffline}"
-               BackgroundColor="#FFF3CD"
-               TextColor="#664D03"
+               BackgroundColor="{StaticResource WarningSurface}"
+               TextColor="{StaticResource Warning}"
                Padding="10,6" />
 
         <Label Grid.Row="2"
                Text="{Binding ErrorMessage}"
                IsVisible="{Binding HasError}"
-               TextColor="Red"
+               Style="{StaticResource ErrorText}"
                Padding="15,6" />
 
         <ActivityIndicator Grid.Row="3"
@@ -57,14 +58,14 @@
                             <Label Text="{Binding Description}" />
                             <Label Text="{Binding CategoryPrimary}"
                                    FontSize="12"
-                                   TextColor="Gray" />
+                                   TextColor="{StaticResource TextMuted}" />
                         </VerticalStackLayout>
                         <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
                             <Label Text="{Binding Amount, StringFormat='{0:C}'}"
                                    HorizontalTextAlignment="End" />
                             <Label Text="{Binding Date, StringFormat='{0:d}'}"
                                    FontSize="12"
-                                   TextColor="Gray"
+                                   TextColor="{StaticResource TextMuted}"
                                    HorizontalTextAlignment="End" />
                         </VerticalStackLayout>
                     </Grid>
