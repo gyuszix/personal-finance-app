@@ -11,6 +11,8 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Emergency fund card on the Savings tab: months of usual spending your
+  checking and savings cover, against the 3-6 month guideline (#90)
 - Burn rate card on the Cash Flow tab: average monthly spending over the
   last three complete months, and how this month is pacing against it
   (#92)
@@ -95,6 +97,8 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- `/accounts/summary` no longer logs the user's net worth - logs carry
+  IDs and counts only (#90)
 - `ApiConfig.BaseUrl` reads from the `PERSONALFINANCE_API_URL` environment
   variable, falling back to `http://localhost:5140`. Was a `const`, so the
   endpoint couldn't change without a rebuild and the value was inlined into

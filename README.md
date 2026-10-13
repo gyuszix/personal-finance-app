@@ -120,6 +120,7 @@ money out, a negative amount is money in. Income is take-home pay.
 | Net cash flow | Cash Flow | Income − spending for the month, over 12 months of income vs spending bars |
 | Burn rate | Cash Flow | Average monthly spending over the three most recent complete months (for the current month, the three before it). This month's pace = spent so far ÷ days elapsed × days in month, shown against the burn rate. "—" with no spending in the window |
 | Savings rate | Savings | (income − spending) ÷ income for the month, plus 12 months of the same. Take-home, because income is take-home pay. Negative when overspent, "—" with no income |
+| Emergency fund | Savings | Today's liquid cash (checking, savings, money market, cash management, PayPal, prepaid; CDs, HSAs and EBT excluded) ÷ the burn rate, in months. A depository account with no subtype yet counts as liquid |
 | Net worth | Net Worth | Assets (depository, investment) − liabilities (credit, loan), today |
 
 A ratio with nothing to divide by (no income, no spending) shows "—", never
