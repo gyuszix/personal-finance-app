@@ -31,5 +31,9 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<Account>().HasQueryFilter(a => a.UserId == _currentUserId);
 
         modelBuilder.Entity<Account>().HasIndex(a => a.PlaidAccountId).IsUnique();
+
+        // Plaid transaction IDs are globally unique. Without this, the old
+        // per-account sync stored each transaction once per account (#53).
+        modelBuilder.Entity<Transaction>().HasIndex(t => t.PlaidTransactionId).IsUnique();
     }
 }

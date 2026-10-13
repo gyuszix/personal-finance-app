@@ -85,9 +85,19 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- Transactions duplicated by the pre-#41 sync are removed: one row is
+  kept per Plaid transaction, sync cursors are reset so the next sync
+  re-attributes each one to its real account, and a unique index on
+  `PlaidTransactionId` stops duplicates coming back. The migration
+  deletes rows and its Down can't restore them - back up the database
+  before applying it anywhere but local dev. Credit card spending now
+  appears on the credit accounts (#53)
+- A Plaid error from `/transactions/sync` (e.g. an Item needing
+  re-login) is now reported with Plaid's error code instead of
+  crashing the sync with a null reference (#53)
 - Plaid sync ran once per account instead of once per Item, storing
   every transaction once per account in its Item and inflating every
-  total. Rows already duplicated are not cleaned up yet - see #53 (#41)
+  total (#41)
 - Bank names show the institution's name instead of Plaid's raw
   institution ID; existing accounts are fixed on their next sync (#40)
 - Two requests hitting an expired token at once both refreshed it,

@@ -73,6 +73,12 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
         Cursor = cursor
       });
 
+      // Going.Plaid reports API errors on the response instead of throwing,
+      // leaving Added/Modified/Removed null.
+      if (response.Error is not null)
+        throw new InvalidOperationException(
+          $"Plaid /transactions/sync failed: {response.Error.ErrorCode} {response.Error.ErrorMessage}");
+
       var addedIds = response.Added.Select(t => t.TransactionId).ToList();
       var existingById = await db.Transactions
         .IgnoreQueryFilters()
