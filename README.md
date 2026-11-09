@@ -8,7 +8,9 @@
 <img width="2560" height="1519" alt="Screenshot 2026-10-13 at 12 55 21" src="https://github.com/user-attachments/assets/9a785df7-adac-4f7b-9f95-945ec75ff67f" />
 
 
-A cross-platform personal finance app that connects to bank accounts (via Plaid) and provides spending insights, transaction history, and budget tracking. Runs on iOS, Android, macOS, and Windows from a single codebase.
+A cross-platform personal finance app that connects to bank accounts (via Plaid) and provides spending insights, transaction history, and budget tracking. One .NET MAUI codebase targets iOS, Android, macOS (Mac Catalyst) and Windows.
+
+> **Work in progress.** Developed and run on macOS so far; the iOS, Android and Windows builds aren't device-tested yet. The architecture below is the target design. Where the current code isn't there yet, the gap is marked **Planned**.
 
 ## Tech stack
 
@@ -22,12 +24,14 @@ A cross-platform personal finance app that connects to bank accounts (via Plaid)
 
 ## Architecture
 
-MAUI client talks only to the ASP.NET Core backend over HTTPS REST. The backend owns all business logic, auth, and Plaid calls — bank data and Plaid credentials never touch the client.
+The MAUI client talks to the ASP.NET Core backend over REST (plus a SignalR hub for sync notifications). The backend owns all business logic, auth, and every Plaid API call. Plaid secrets and access tokens never reach the client: it only handles a short-lived link token and the one-time public token from Plaid Link, which runs in a WebView. The client receives the user's transactions to display, and caches the first page locally for offline use.
 
+- **Transport:** plain HTTP to `localhost` in local development. **Planned:** HTTPS-only with HSTS once the API is hosted, and an encrypted offline cache.
 - **Sync:** Plaid data is mirrored into Postgres and served from there. Cursor-based transaction sync (`/transactions/sync`), balances refreshed on each sync.
-- **Auth:** 15-min JWT access tokens + rotating refresh tokens (reuse detection revokes the whole token family). Plaid access tokens encrypted at rest.
+- **Auth:** JWT access tokens (currently 1 hour) + refresh tokens that rotate on every use. Reusing an already-rotated refresh token revokes every refresh token for that user. Plaid access tokens encrypted at rest with ASP.NET Core Data Protection. **Planned:** 15-minute access tokens, per-family revocation, hashed refresh tokens.
 - **Categorization:** Plaid's `personal_finance_category` taxonomy.
-- **API:** versioned `/api/v1/` minimal APIs, cursor/offset pagination, per-user isolation via an EF Core global query filter on `UserId`.
+- **API:** versioned `/api/v1/` minimal APIs, offset pagination, per-user isolation via EF Core global query filters on `UserId` for accounts, transactions, balance snapshots and budgets (failing closed when no user is signed in). **Planned:** keyset (cursor) pagination.
+- **Deployment:** local only for now. Postgres runs in Docker via `docker-compose`; the API runs with `dotnet run`. **Planned:** containerise the API.
 - **Client:** MVVM (CommunityToolkit), server is the source of truth.
 
 ## Project structure

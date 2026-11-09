@@ -12,7 +12,7 @@ Everything under `/api/v1/transactions`, `/api/v1/accounts`, and `/api/v1/plaid`
 Authorization: Bearer <token>
 ```
 
-Access tokens expire after 15 minutes. Use the refresh token to get a new pair without asking the user to log in again.
+Access tokens currently expire after 1 hour (planned: 15 minutes). Refresh tokens last 7 days. Use the refresh token to get a new pair without asking the user to log in again.
 
 ### `POST /api/v1/auth/register`
 
@@ -56,7 +56,7 @@ Not authenticated (the refresh token itself is the credential). Rotates the refr
 
 **Response**
 - `200 OK` — same shape as login: `{ "token": "...", "refreshToken": "..." }`
-- `401 Unauthorized` — token not found, expired, **or already used** (reuse of a revoked token revokes the entire token family - every refresh token issued to that user is invalidated, forcing a fresh login)
+- `401 Unauthorized` — token not found, expired, **or already used** (presenting an already-revoked token is treated as theft: every refresh token issued to that user is invalidated, forcing a fresh login on every device. Access tokens already issued stay valid until they expire. Planned: revoke only the affected token family)
 
 ### `POST /api/v1/auth/revoke`
 
