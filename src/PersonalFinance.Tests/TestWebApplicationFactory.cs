@@ -76,7 +76,9 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 ["Jwt:Audience"] = "PersonalFinance.Api",
                 ["Plaid:ClientId"] = "test-client",
                 ["Plaid:Secret"] = "test-secret",
-                ["Plaid:Environment"] = "Sandbox"
+                ["Plaid:Environment"] = "Sandbox",
+                ["Encryption:CurrentKeyId"] = "test-k1",
+                ["Encryption:Keys:test-k1"] = TestKeys.K1
             });
         });
     }
@@ -100,4 +102,11 @@ public static class SystemScopeExtensions
             system.Dispose();
         }
     }
+}
+
+public static class TestKeys
+{
+    // Fixed test KEKs (#120). Never use these anywhere but tests.
+    public static readonly string K1 = Convert.ToBase64String(Enumerable.Range(1, 32).Select(i => (byte)i).ToArray());
+    public static readonly string K2 = Convert.ToBase64String(Enumerable.Range(101, 32).Select(i => (byte)i).ToArray());
 }

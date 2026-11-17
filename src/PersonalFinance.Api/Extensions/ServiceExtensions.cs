@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.Api.Services;
 using PersonalFinance.Api.Services.Auth;
 using PersonalFinance.Api.Services.Webhooks;
+using PersonalFinance.Api.Services.Encryption;
 using Asp.Versioning;
 
 namespace PersonalFinance.Api.Extensions;
@@ -64,6 +65,8 @@ public static class ServiceExtensions
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<AppDbContext>();
         services.AddScoped<TotpVerifier>();
+        // TOTP secrets and recovery codes envelope-encrypted at rest (#120).
+        services.Replace(ServiceDescriptor.Scoped<IUserStore<User>, ProtectedUserStore>());
 
         return services;
     }
@@ -221,7 +224,12 @@ public static class ServiceExtensions
                     options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(keysPath), loggerFactory);
                 }
             });
+        // Envelope encryption (#120): the KEK provider is the one piece to swap
+        // for a managed KMS in production - see docs/KEY_MANAGEMENT.md.
+        services.AddSingleton<IKeyEncryptionKeyProvider, LocalKeyEncryptionKeyProvider>();
+        services.AddSingleton<EnvelopeEncryptor>();
         services.AddSingleton<PlaidTokenProtector>();
+        services.AddScoped<SecretRewrapper>();
 
         // Webhooks (#118): verification keys are cached in memory; syncs are
         // queued and run by the worker, in every environment (tests too).

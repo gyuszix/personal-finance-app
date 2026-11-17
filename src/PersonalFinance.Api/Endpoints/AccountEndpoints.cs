@@ -98,7 +98,7 @@ public static class AccountEndpoints
             string? accessToken = null;
             try
             {
-                accessToken = protector.Unprotect(account.PlaidAccessToken);
+                accessToken = protector.Unprotect(account.PlaidAccessToken, account.UserId);
             }
             catch (CryptographicException)
             {

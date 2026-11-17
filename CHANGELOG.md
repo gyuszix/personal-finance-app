@@ -253,6 +253,17 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   a dev database)
 
 ### Security
+- Envelope encryption for stored secrets: Plaid access tokens, and now
+  TOTP secrets and MFA recovery codes too (Identity stored those in
+  plain text). Each secret gets its own AES-256-GCM data key, wrapped by
+  a key-encryption key from configuration, never the database, with the
+  owning user bound in as associated data. Key rotation: add a key, make
+  it current, run `dotnet run --project src/PersonalFinance.Api --
+  rewrap-secrets` (re-wraps data keys only, idempotent, also upgrades
+  old Data Protection tokens), then retire the old key. **Requires
+  `Encryption:Keys:<id>` and `Encryption:CurrentKeyId`**: the API won't
+  start without them (`scripts/new-kek.sh`). See
+  `docs/KEY_MANAGEMENT.md` (#120)
 - Postgres row-level security behind the EF query filters on `Accounts`,
   `Transactions`, `BalanceSnapshots`, `Budgets` (per user) and
   `AuditEvents` (read own, append any). `RlsSessionInterceptor` stamps

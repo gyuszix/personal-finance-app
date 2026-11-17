@@ -83,7 +83,7 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
   {
 
     int added = 0, modified = 0, removed = 0;
-    var accessToken = protector.Unprotect(itemAccounts[0].PlaidAccessToken);
+    var accessToken = protector.Unprotect(itemAccounts[0].PlaidAccessToken, itemAccounts[0].UserId);
     var accountsByPlaidId = itemAccounts.ToDictionary(a => a.PlaidAccountId);
 
     // The cursor belongs to the Item, but it's stored per Account row. If the
