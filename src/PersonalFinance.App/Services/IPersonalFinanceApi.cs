@@ -11,6 +11,24 @@ public interface IPersonalFinanceApi
     [Post("/api/v1/auth/register")]
     Task<IApiResponse> RegisterAsync([Body] RegisterRequest request);
 
+    [Get("/api/v1/auth/mfa")]
+    Task<ApiResponse<MfaStatusResponse>> GetMfaStatusAsync();
+
+    [Post("/api/v1/auth/mfa/setup")]
+    Task<ApiResponse<MfaSetupResponse>> SetupMfaAsync();
+
+    [Post("/api/v1/auth/mfa/enable")]
+    Task<ApiResponse<MfaRecoveryCodesResponse>> EnableMfaAsync([Body] MfaCodeRequest request);
+
+    [Post("/api/v1/auth/mfa/disable")]
+    Task<IApiResponse> DisableMfaAsync([Body] MfaCodeRequest request);
+
+    [Post("/api/v1/auth/mfa/recovery-codes")]
+    Task<ApiResponse<MfaRecoveryCodesResponse>> RegenerateRecoveryCodesAsync([Body] MfaCodeRequest request);
+
+    [Get("/api/v1/audit")]
+    Task<ApiResponse<PagedResult<AuditEventResponse>>> GetAuditEventsAsync([Query] int page, [Query] int pageSize);
+
     [Post("/api/v1/auth/refresh")]
     Task<ApiResponse<TokenResponse>> RefreshAsync([Body] RefreshTokenRequest request);
 
@@ -57,7 +75,7 @@ public interface IPersonalFinanceApi
     Task<IApiResponse> ClearBudgetAsync(string category);
 }
 
-public record LoginRequest(string Email, string Password);
+public record LoginRequest(string Email, string Password, string? TwoFactorCode = null, string? TwoFactorRecoveryCode = null);
 public record RegisterRequest(string Email, string Password);
 public record RefreshTokenRequest(string RefreshToken);
 public record ExchangeTokenRequest(string PublicToken);

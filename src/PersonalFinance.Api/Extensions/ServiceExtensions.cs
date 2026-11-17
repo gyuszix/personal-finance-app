@@ -39,9 +39,18 @@ public static class ServiceExtensions
 
     public static IServiceCollection AddIdentityServices(this IServiceCollection services)
     {
-        services.AddIdentityApiEndpoints<User>()
+        services.AddIdentityApiEndpoints<User>(options =>
+            {
+                // Counted on wrong passwords and wrong MFA codes in /auth/login
+                // (#117): 5 tries per 15 minutes makes guessing a 6-digit TOTP
+                // (1 in a million per try) hopeless.
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.AllowedForNewUsers = true;
+            })
             .AddRoles<IdentityRole>()
             .AddEntityFrameworkStores<AppDbContext>();
+        services.AddScoped<TotpVerifier>();
 
         return services;
     }

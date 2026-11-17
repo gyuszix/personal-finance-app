@@ -26,6 +26,11 @@ public static class AuditEventTypes
     public const string LoginFailed = "auth.login.failed";
     public const string RefreshTokenReuseDetected = "auth.refresh.reuse_detected";
     public const string Logout = "auth.logout";
+    public const string MfaEnabled = "auth.mfa.enabled";
+    public const string MfaDisabled = "auth.mfa.disabled";
+    public const string MfaFailed = "auth.mfa.failed";
+    public const string MfaRecoveryCodeUsed = "auth.mfa.recovery_code_used";
+    public const string MfaRecoveryCodesRegenerated = "auth.mfa.recovery_codes_regenerated";
     public const string PlaidItemLinked = "plaid.item.linked";
     public const string PlaidItemUnlinked = "plaid.item.unlinked";
 }

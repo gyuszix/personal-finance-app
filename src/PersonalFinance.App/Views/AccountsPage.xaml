@@ -77,6 +77,9 @@
                    HorizontalOptions="Center"
                    IsVisible="{Binding HasConnectBankStatus}" />
 
+            <Button Text="Security" Style="{StaticResource GhostButton}"
+                    Command="{Binding OpenSecurityCommand}" />
+
             <Button Text="Log out" Style="{StaticResource GhostButton}"
                     Command="{Binding LogoutCommand}" />
         </VerticalStackLayout>

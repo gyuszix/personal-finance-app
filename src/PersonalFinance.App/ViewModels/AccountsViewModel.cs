@@ -174,6 +174,9 @@ public partial class AccountsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private Task OpenSecurityAsync() => Shell.Current.GoToAsync("security");
+
+    [RelayCommand]
     private async Task LogoutAsync()
     {
         await _apiService.LogoutAsync();

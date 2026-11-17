@@ -5,6 +5,7 @@ using PersonalFinance.Api.Entities;
 using Microsoft.Extensions.Options;
 using PersonalFinance.Api.Services;
 using PersonalFinance.Api.Services.Auth;
+using PersonalFinance.Shared.DTOs;
 using PersonalFinance.Api.Middleware;
 
 namespace PersonalFinance.Api.Endpoints;
@@ -39,10 +40,21 @@ public static class AuthEndpoints
             bool? useCookies,
             UserManager<User> userManager,
             TokenService tokens,
+            TotpVerifier totp,
             AuditLog audit,
             IOptions<JwtOptions> jwt,
             HttpContext http) =>
         {
+            async Task<IResult> SecondFactorFailedAsync(User user, string reason)
+            {
+                await userManager.AccessFailedAsync(user);
+                await audit.RecordAsync(AuditEventTypes.MfaFailed, user.Id, new { reason });
+                return Results.Problem(
+                    statusCode: StatusCodes.Status401Unauthorized,
+                    title: "Invalid two-factor code",
+                    extensions: new Dictionary<string, object?> { ["code"] = MfaProblemCodes.InvalidTwoFactorCode });
+            }
+
             var user = await userManager.FindByEmailAsync(request.Email);
             if (user == null)
             {
@@ -51,11 +63,52 @@ public static class AuthEndpoints
                 await audit.RecordAsync(AuditEventTypes.LoginFailed, null, new { reason = "unknown-email" });
                 return Results.Unauthorized();
             }
+
+            // Wrong passwords and wrong second-factor codes both count toward
+            // the lockout (5 tries, then 15 minutes - see AddIdentityServices),
+            // which is what makes a 6-digit code impractical to guess (#117).
+            if (await userManager.IsLockedOutAsync(user))
+            {
+                await audit.RecordAsync(AuditEventTypes.LoginFailed, user.Id, new { reason = "locked-out" });
+                return Results.Unauthorized();
+            }
+
             if (!await userManager.CheckPasswordAsync(user, request.Password))
             {
+                await userManager.AccessFailedAsync(user);
                 await audit.RecordAsync(AuditEventTypes.LoginFailed, user.Id, new { reason = "wrong-password" });
                 return Results.Unauthorized();
             }
+
+            if (user.TwoFactorEnabled)
+            {
+                if (!string.IsNullOrWhiteSpace(request.TwoFactorCode))
+                {
+                    if (!await totp.VerifyAsync(user, request.TwoFactorCode))
+                        return await SecondFactorFailedAsync(user, "wrong-code");
+                }
+                else if (!string.IsNullOrWhiteSpace(request.TwoFactorRecoveryCode))
+                {
+                    var redeemed = await userManager.RedeemTwoFactorRecoveryCodeAsync(
+                        user, TotpVerifier.NormalizeRecoveryCode(request.TwoFactorRecoveryCode));
+                    if (!redeemed.Succeeded)
+                        return await SecondFactorFailedAsync(user, "wrong-recovery-code");
+
+                    await audit.RecordAsync(AuditEventTypes.MfaRecoveryCodeUsed, user.Id,
+                        new { recoveryCodesLeft = await userManager.CountRecoveryCodesAsync(user) });
+                }
+                else
+                {
+                    // Password was right; not a failure, just the next step.
+                    return Results.Problem(
+                        statusCode: StatusCodes.Status401Unauthorized,
+                        title: "Two-factor code required",
+                        detail: "Send the login again with twoFactorCode or twoFactorRecoveryCode.",
+                        extensions: new Dictionary<string, object?> { ["code"] = MfaProblemCodes.RequiresTwoFactor });
+                }
+            }
+
+            await userManager.ResetAccessFailedCountAsync(user);
 
             var issued = await tokens.IssueAsync(user);
             await audit.RecordAsync(AuditEventTypes.LoginSucceeded, user.Id,

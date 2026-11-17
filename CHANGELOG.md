@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Two-factor authentication (TOTP, RFC 6238) with any authenticator app.
+  Set it up on the new **Security** page (from Accounts): copy the key
+  or setup link, confirm with a code, and save the 10 one-time recovery
+  codes. Login asks for a code (or a recovery code) when it's on. `GET
+  /auth/mfa`, `POST /auth/mfa/setup|enable|disable|recovery-codes`. The
+  Security page also lists recent security activity from the audit log,
+  with failed sign-ins and possible token theft highlighted (#117)
 - Audit log of security events: logins (succeeded/failed), refresh-token
   reuse detection, logout, and Plaid bank link/unlink, each with time,
   IP, user agent and small JSON details (never secrets). `GET
@@ -237,6 +244,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   a dev database)
 
 ### Security
+- Account lockout: 5 wrong passwords or two-factor codes lock sign-in
+  for 15 minutes. It was unlimited, apart from the per-IP rate limit. An
+  accepted TOTP code is refused for 3 minutes afterwards, so it can't be
+  replayed within its validity window (#117)
 - Access tokens last 10 minutes (was 1 hour), with a 30-second clock
   skew (was the default 5 minutes) and a `jti`. Refresh tokens are
   stored only as SHA-256 hashes and grouped into a family per login: 7
