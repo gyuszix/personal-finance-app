@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Recurring card on the Cash Flow tab: subscriptions and bills found in
+  your spending, with what they cost a month in total and the next
+  charges due. Detects weekly, fortnightly, monthly, quarterly and
+  yearly series from regular gaps and steady amounts, groups merchants
+  whose descriptions carry changing reference numbers, and drops
+  subscriptions that have stopped. `GET /api/v1/insights/recurring`
+  (#125)
 - Categorisation rules: "description contains/is exactly X → category
   Y", optionally only for one account or an amount range, with
   priorities (first match wins). Rules apply to every matching
