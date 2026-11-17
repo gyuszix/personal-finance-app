@@ -38,7 +38,7 @@ public class AuthRefreshHandler(AuthTokenProvider tokenProvider) : DelegatingHan
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenProvider.AccessToken);
     }
 
-    private static async Task<TokenResponse?> RequestRefreshAsync(string refreshToken, CancellationToken cancellationToken)
+    internal static async Task<TokenResponse?> RequestRefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
         using var http = new HttpClient { BaseAddress = new Uri(ApiConfig.BaseUrl) };
         var response = await http.PostAsJsonAsync(

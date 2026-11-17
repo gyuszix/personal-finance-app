@@ -47,6 +47,38 @@ public class AuthTokenProvider
         }
     }
 
+    // The current access token, refreshed first if it expires within the
+    // next 30 seconds. For callers that can't retry on a 401 the way
+    // AuthRefreshHandler does - the SignalR handshake (#115).
+    public async Task<string?> GetFreshAccessTokenAsync(
+        Func<string, CancellationToken, Task<TokenResponse?>> requestRefresh,
+        CancellationToken cancellationToken)
+    {
+        var token = AccessToken;
+        if (token == null || ExpiresAt(token) > DateTimeOffset.UtcNow.AddSeconds(30)) return token;
+
+        await RefreshAsync(token, requestRefresh, cancellationToken);
+        return AccessToken;
+    }
+
+    // Reads the JWT's exp claim. No signature check needed: the server
+    // validates the token; this only decides whether to refresh early.
+    // Unreadable tokens count as expired.
+    internal static DateTimeOffset ExpiresAt(string jwt)
+    {
+        try
+        {
+            var payload = jwt.Split('.')[1].Replace('-', '+').Replace('_', '/');
+            payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+            using var json = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload));
+            return DateTimeOffset.FromUnixTimeSeconds(json.RootElement.GetProperty("exp").GetInt64());
+        }
+        catch (Exception)
+        {
+            return DateTimeOffset.MinValue;
+        }
+    }
+
     public async Task<bool> TryRestoreAsync()
     {
         string? token, refreshToken;

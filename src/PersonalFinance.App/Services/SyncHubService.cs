@@ -29,9 +29,12 @@ public class SyncHubService(AuthTokenProvider tokenProvider)
             var connection = new HubConnectionBuilder()
                 .WithUrl(new Uri(new Uri(ApiConfig.BaseUrl), "/hubs/transactions"), options =>
                 {
-                    // Read on every (re)connect, so a reconnect after the
-                    // access token was refreshed uses the new one.
-                    options.AccessTokenProvider = () => Task.FromResult(tokenProvider.AccessToken);
+                    // Read on every (re)connect. Access tokens only last 10
+                    // minutes (#115), and a reconnect (after sleep, a network
+                    // change) doesn't go through AuthRefreshHandler's
+                    // refresh-on-401 - so refresh first if it's about to expire.
+                    options.AccessTokenProvider = () =>
+                        tokenProvider.GetFreshAccessTokenAsync(AuthRefreshHandler.RequestRefreshAsync, CancellationToken.None);
                 })
                 .WithAutomaticReconnect()
                 .Build();
