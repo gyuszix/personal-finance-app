@@ -23,6 +23,7 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<RefreshToken> RefreshTokens {get; set;}
     public DbSet<BalanceSnapshot> BalanceSnapshots {get; set;}
     public DbSet<Budget> Budgets {get; set;}
+    public DbSet<AuditEvent> AuditEvents {get; set;}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +71,15 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<RefreshToken>().Ignore(r => r.IsRevoked);
 
         modelBuilder.Entity<Budget>().HasIndex(b => new { b.UserId, b.Category }).IsUnique();
+
+        // Read per user, newest first (#116). No query filter: the audit
+        // endpoint filters explicitly, and security events without a user
+        // (failed logins for unknown emails) must still be recordable.
+        modelBuilder.Entity<AuditEvent>().HasIndex(e => new { e.UserId, e.OccurredAt });
+        modelBuilder.Entity<AuditEvent>().Property(e => e.EventType).HasMaxLength(64).IsRequired();
+        modelBuilder.Entity<AuditEvent>().Property(e => e.IpAddress).HasMaxLength(64);
+        modelBuilder.Entity<AuditEvent>().Property(e => e.UserAgent).HasMaxLength(256);
+        modelBuilder.Entity<AuditEvent>().Property(e => e.Details).HasColumnType("jsonb");
         modelBuilder.Entity<Budget>().Property(b => b.UserId).IsRequired();
         modelBuilder.Entity<Budget>().Property(b => b.Category).IsRequired().HasMaxLength(64);
         modelBuilder.Entity<Budget>().Property(b => b.MonthlyLimit).HasPrecision(12, 2);

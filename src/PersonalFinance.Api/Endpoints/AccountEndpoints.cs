@@ -83,6 +83,7 @@ public static class AccountEndpoints
             PlaidClient plaid,
             PlaidTokenProtector protector,
             SummaryCache summaryCache,
+            AuditLog audit,
             ILogger<Program> logger) =>
         {
             // The per-user query filter makes someone else's account a 404.
@@ -132,6 +133,14 @@ public static class AccountEndpoints
             await db.SaveChangesAsync();
 
             summaryCache.InvalidateForUser(account.UserId);
+
+            await audit.RecordAsync(AuditEventTypes.PlaidItemUnlinked, account.UserId, new
+            {
+                itemId = account.PlaidItemId,
+                accountIds = itemAccountIds,
+                // false when the token no longer decrypted, so Plaid was never told
+                plaidNotified = accessToken != null
+            });
 
             logger.LogInformation("Unlinked Plaid Item: removed accounts {AccountIds}", itemAccountIds);
             return Results.NoContent();

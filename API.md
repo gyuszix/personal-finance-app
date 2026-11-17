@@ -87,6 +87,40 @@ Or no body, to use (and clear) the `pf_refresh` cookie.
 - `204 No Content`
 - `400 Bad Request` — no token, token not found, or already revoked
 
+## Audit
+
+### `GET /api/v1/audit`
+
+Requires auth. The signed-in user's own security events, newest first. Paged like `/transactions`: `page` (default 1) and `pageSize` (1-200, default 50).
+
+**Response**
+```json
+{
+  "items": [
+    {
+      "id": 42,
+      "occurredAt": "2026-11-16T18:03:11Z",
+      "eventType": "auth.refresh.reuse_detected",
+      "ipAddress": "203.0.113.7",
+      "userAgent": "PersonalFinance/0.3 (Mac Catalyst)",
+      "details": { "sessionId": "8c1f…", "sessionRevoked": true }
+    }
+  ],
+  "page": 1, "pageSize": 50, "totalCount": 1, "hasMore": false
+}
+```
+
+| `eventType` | When | `details` |
+|---|---|---|
+| `auth.login.succeeded` | Password accepted | `sessionId` (the refresh-token family), `cookie` |
+| `auth.login.failed` | Wrong password (recorded against the user). An unknown email is recorded with no user and is never shown here | `reason`: `wrong-password` / `unknown-email` |
+| `auth.refresh.reuse_detected` | A rotated refresh token was presented again: likely theft, and the session was ended | `sessionId`, `sessionRevoked` |
+| `auth.logout` | `/auth/revoke` | `sessionId` |
+| `plaid.item.linked` | A bank connected | `itemId`, `institutionId`, `accountCount` |
+| `plaid.item.unlinked` | A bank disconnected | `itemId`, `accountIds`, `plaidNotified` (false if Plaid couldn't be told because the token no longer decrypted) |
+
+Events never contain passwords, tokens, Plaid access tokens, or the email typed into a failed login. The table is append-only: the database rejects `UPDATE`, `DELETE` and `TRUNCATE` on it. Every event is also written as a structured log entry (`Audit {AuditEventType} …`).
+
 ## Plaid
 
 All endpoints below require `Authorization: Bearer <token>`.

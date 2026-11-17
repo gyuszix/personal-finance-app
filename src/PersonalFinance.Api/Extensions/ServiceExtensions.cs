@@ -50,6 +50,8 @@ public static class ServiceExtensions
     {
         services.Configure<JwtOptions>(config.GetSection("Jwt"));
         services.AddScoped<TokenService>();
+        services.AddScoped<AuditLog>();
+        services.TryAddSingleton(TimeProvider.System);
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
