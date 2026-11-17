@@ -33,4 +33,5 @@ public static class AuditEventTypes
     public const string MfaRecoveryCodesRegenerated = "auth.mfa.recovery_codes_regenerated";
     public const string PlaidItemLinked = "plaid.item.linked";
     public const string PlaidItemUnlinked = "plaid.item.unlinked";
+    public const string PlaidWebhookRejected = "plaid.webhook.rejected";
 }

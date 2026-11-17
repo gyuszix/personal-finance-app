@@ -18,6 +18,7 @@ using PersonalFinance.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.Api.Services;
 using PersonalFinance.Api.Services.Auth;
+using PersonalFinance.Api.Services.Webhooks;
 using Asp.Versioning;
 
 namespace PersonalFinance.Api.Extensions;
@@ -209,6 +210,13 @@ public static class ServiceExtensions
                 }
             });
         services.AddSingleton<PlaidTokenProtector>();
+
+        // Webhooks (#118): verification keys are cached in memory; syncs are
+        // queued and run by the worker, in every environment (tests too).
+        services.AddMemoryCache();
+        services.AddSingleton<PlaidWebhookVerifier>();
+        services.AddSingleton<PlaidItemSyncQueue>();
+        services.AddHostedService<PlaidWebhookSyncWorker>();
 
         return services;
     }
