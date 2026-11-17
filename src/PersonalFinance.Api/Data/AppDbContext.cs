@@ -15,6 +15,9 @@ public class AppDbContext : IdentityDbContext<User>
         _currentUserId = httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 
+    public const int MoneyPrecision = 18;
+    public const int MoneyScale = 2;
+
     public DbSet<Account> Accounts {get; set;}
     public DbSet<Transaction> Transactions {get; set;}
     public DbSet<RefreshToken> RefreshTokens {get; set;}
@@ -50,5 +53,13 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<Budget>().Property(b => b.UserId).IsRequired();
         modelBuilder.Entity<Budget>().Property(b => b.Category).IsRequired().HasMaxLength(64);
         modelBuilder.Entity<Budget>().Property(b => b.MonthlyLimit).HasPrecision(12, 2);
+
+        // Money is decimal with an explicit precision, never float/double and
+        // never unconstrained numeric: 18 digits, 2 after the point (cents)
+        // covers any balance we'll see. MoneyPrecisionTests enforces this for
+        // every decimal column (#112).
+        modelBuilder.Entity<Transaction>().Property(t => t.Amount).HasPrecision(MoneyPrecision, MoneyScale);
+        modelBuilder.Entity<Account>().Property(a => a.Balance).HasPrecision(MoneyPrecision, MoneyScale);
+        modelBuilder.Entity<BalanceSnapshot>().Property(s => s.Balance).HasPrecision(MoneyPrecision, MoneyScale);
     }
 }
