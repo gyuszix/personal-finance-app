@@ -57,7 +57,7 @@ public class TokenHardeningTests(TestWebApplicationFactory factory) : IClassFixt
         var (client, email) = await RegisteredAsync();
         var tokens = await LoginAsync(client, email);
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await db.RefreshTokens.SingleAsync(r => r.TokenHash == TokenService.Hash(tokens.RefreshToken!));
         Assert.NotEqual(tokens.RefreshToken, stored.TokenHash);
@@ -89,7 +89,7 @@ public class TokenHardeningTests(TestWebApplicationFactory factory) : IClassFixt
         var responses = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => RefreshAsync(client, tokens.RefreshToken)));
 
         Assert.True(responses.Count(r => r.StatusCode == HttpStatusCode.OK) <= 1);
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var family = (await db.RefreshTokens.SingleAsync(r => r.TokenHash == TokenService.Hash(tokens.RefreshToken!))).FamilyId;
         Assert.True(await db.RefreshTokens.CountAsync(r => r.FamilyId == family && r.RevokedAt == null) <= 1);
@@ -108,7 +108,7 @@ public class TokenHardeningTests(TestWebApplicationFactory factory) : IClassFixt
         Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(client, tokens.RefreshToken)).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await RefreshAsync(client, other.RefreshToken)).StatusCode);
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var revoked = await db.RefreshTokens.SingleAsync(r => r.TokenHash == TokenService.Hash(tokens.RefreshToken!));
         Assert.Equal(RefreshTokenRevocation.Logout, revoked.RevokedReason);
@@ -121,7 +121,7 @@ public class TokenHardeningTests(TestWebApplicationFactory factory) : IClassFixt
         var tokens = await LoginAsync(client, email);
 
         // Pretend the login was 29.5 days ago: the family ends in half a day.
-        using (var scope = factory.Services.CreateScope())
+        using (var scope = factory.SystemScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var started = DateTime.UtcNow.AddDays(-29.5);
@@ -131,7 +131,7 @@ public class TokenHardeningTests(TestWebApplicationFactory factory) : IClassFixt
 
         var rotated = await (await RefreshAsync(client, tokens.RefreshToken)).Content.ReadFromJsonAsync<Tokens>();
 
-        using var check = factory.Services.CreateScope();
+        using var check = factory.SystemScope();
         var next = await check.ServiceProvider.GetRequiredService<AppDbContext>().RefreshTokens
             .SingleAsync(r => r.TokenHash == TokenService.Hash(rotated!.RefreshToken!));
         Assert.InRange(next.ExpiresAt, DateTime.UtcNow.AddHours(11), DateTime.UtcNow.AddHours(13));

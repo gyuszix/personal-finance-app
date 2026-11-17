@@ -27,7 +27,7 @@ public class PlaidSyncTests(FakePlaidWebApplicationFactory factory) : IClassFixt
 
     private async Task<(int Added, int Modified, int Removed)> SyncAsync(int accountId)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var sync = scope.ServiceProvider.GetRequiredService<PlaidSyncService>();
         var account = await db.Accounts.IgnoreQueryFilters().SingleAsync(a => a.AccountId == accountId);
@@ -36,14 +36,14 @@ public class PlaidSyncTests(FakePlaidWebApplicationFactory factory) : IClassFixt
 
     private async Task<List<Transaction>> StoredAsync(int accountId)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await db.Transactions.IgnoreQueryFilters().Where(t => t.AccountId == accountId).OrderBy(t => t.PlaidTransactionId).ToListAsync();
     }
 
     private async Task<Account> ReloadAsync(int accountId)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>().Accounts.IgnoreQueryFilters().SingleAsync(a => a.AccountId == accountId);
     }
 
@@ -75,7 +75,7 @@ public class PlaidSyncTests(FakePlaidWebApplicationFactory factory) : IClassFixt
 
         // Lose the cursor, as a restored backup or an account added to the
         // Item later would: Plaid replays everything from the start.
-        using (var scope = factory.Services.CreateScope())
+        using (var scope = factory.SystemScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await db.Accounts.IgnoreQueryFilters().Where(a => a.AccountId == account.AccountId)

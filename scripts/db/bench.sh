@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Reproduces docs/DB_INDEXES.md: starts a throwaway Postgres 16, applies the
 # EF migrations (optionally only up to a given one), seeds 1M transactions
-# and prints EXPLAIN (ANALYZE, BUFFERS) for the hot queries. Removes the
+# and prints EXPLAIN (ANALYZE, BUFFERS) for the hot queries (as pf_app,
+# under row-level security, with BENCH_AS_APP=1). Removes the
 # container afterwards. Usage: scripts/db/bench.sh [TargetMigration]
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -25,4 +26,12 @@ if [ -n "${BENCH_EXTRA_SQL:-}" ]; then
   docker exec -i "$NAME" psql -q -U postgres -c "$BENCH_EXTRA_SQL"
 fi
 docker exec -i "$NAME" psql -U postgres -c "SELECT indexrelname AS index, pg_size_pretty(pg_relation_size(indexrelid)) AS size FROM pg_stat_user_indexes WHERE relname = 'Transactions' ORDER BY 1" 2>/dev/null | sed 's/^/  /' || true
-docker exec -i "$NAME" psql -U postgres < scripts/db/bench-explain.sql
+if [ -n "${BENCH_AS_APP:-}" ]; then
+  # As the API's role, with row-level security applying (#119): the session
+  # settings RlsSessionInterceptor would set for user-1234.
+  docker exec -i "$NAME" psql -q -U postgres -c "ALTER ROLE pf_app LOGIN"
+  { echo "SELECT set_config('app.user_id', 'user-1234', false), set_config('app.rls_bypass', 'off', false);";
+    cat scripts/db/bench-explain.sql; } | docker exec -i "$NAME" psql -U pf_app -d postgres
+else
+  docker exec -i "$NAME" psql -U postgres < scripts/db/bench-explain.sql
+fi

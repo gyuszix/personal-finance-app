@@ -15,7 +15,7 @@ public class QueryFilterTests(TestWebApplicationFactory factory) : IClassFixture
     {
         var plaidAccountId = Guid.NewGuid().ToString();
 
-        using (var scope = factory.Services.CreateScope())
+        using (var scope = factory.SystemScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var account = new Account
@@ -41,7 +41,7 @@ public class QueryFilterTests(TestWebApplicationFactory factory) : IClassFixture
             await db.SaveChangesAsync();
         }
 
-        using (var scope = factory.Services.CreateScope())
+        using (var scope = factory.SystemScope())
         {
             // No HttpContext in a bare scope - same as ScheduledPlaidSyncService.
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();

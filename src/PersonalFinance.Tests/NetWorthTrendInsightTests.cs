@@ -71,7 +71,7 @@ public class NetWorthTrendInsightTests(TestWebApplicationFactory factory) : ICla
 
     private async Task SnapshotAsync(TestUser user, Account account, DateOnly date, decimal balance)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.BalanceSnapshots.Add(new BalanceSnapshot { AccountId = account.AccountId, UserId = user.Id, Date = date, Balance = balance });
         await db.SaveChangesAsync();

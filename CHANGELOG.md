@@ -129,6 +129,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- Deleting someone else's transaction now returns `404` instead of
+  `403`. Row-level security hides the row entirely, matching the
+  accounts endpoints and not revealing that the id exists (#119)
 - Transactions are indexed on `(UserId, Date)` and Accounts on `UserId`:
   every per-user read used to scan the whole table. At 1M transactions
   the first page of `/transactions` drops from 14,458 buffers / 19 ms to
@@ -250,6 +253,17 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   a dev database)
 
 ### Security
+- Postgres row-level security behind the EF query filters on `Accounts`,
+  `Transactions`, `BalanceSnapshots`, `Budgets` (per user) and
+  `AuditEvents` (read own, append any). `RlsSessionInterceptor` stamps
+  the signed-in user on every connection, and background jobs must enter
+  `DbSystemScope`, which is ignored inside requests. The API now
+  connects as a new `pf_app` role: DML only, no DDL, append-only on
+  `AuditEvents`, and subject to RLS. It warns at startup (refuses in
+  Production) if its role would bypass RLS. **Local setup changes**:
+  `ConnectionStrings:Default` uses `pf_app`, and a new
+  `ConnectionStrings:Migrations` (owner) is used by `dotnet ef`. See
+  README, "Database roles" (#119)
 - Account lockout: 5 wrong passwords or two-factor codes lock sign-in
   for 15 minutes. It was unlimited, apart from the per-IP rate limit. An
   accepted TOTP code is refused for 3 minutes afterwards, so it can't be

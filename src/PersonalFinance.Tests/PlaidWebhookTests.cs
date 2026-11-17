@@ -80,7 +80,7 @@ public class PlaidWebhookTests : IClassFixture<FakePlaidWebApplicationFactory>
         var plaidAccountId = $"acc-{Guid.NewGuid():N}";
         var protector = _factory.Services.GetRequiredService<PlaidTokenProtector>();
         var account = await user.AddAccountAsync(accessToken: protector.Protect("access-sandbox-webhook"), plaidAccountId: plaidAccountId);
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = _factory.SystemScope())
         {
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Accounts.IgnoreQueryFilters()
                 .Where(a => a.AccountId == account.AccountId)
@@ -98,7 +98,7 @@ public class PlaidWebhookTests : IClassFixture<FakePlaidWebApplicationFactory>
         bool stored;
         do
         {
-            using var scope = _factory.Services.CreateScope();
+            using var scope = _factory.SystemScope();
             stored = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Transactions.IgnoreQueryFilters()
                 .AnyAsync(t => t.PlaidTransactionId == $"wh-{itemId}");
             if (!stored) await Task.Delay(100);
@@ -197,7 +197,7 @@ public class PlaidWebhookTests : IClassFixture<FakePlaidWebApplicationFactory>
     {
         await PostAsync(SyncUpdatesAvailable("item-x"), "not-a-jwt");
 
-        using var scope = _factory.Services.CreateScope();
+        using var scope = _factory.SystemScope();
         var rejected = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents
             .Where(e => e.EventType == AuditEventTypes.PlaidWebhookRejected)
             .OrderByDescending(e => e.Id).FirstAsync();

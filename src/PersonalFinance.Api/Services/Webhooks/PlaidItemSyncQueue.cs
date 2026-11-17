@@ -54,6 +54,9 @@ public class PlaidWebhookSyncWorker(
     private async Task SyncAsync(string itemId, CancellationToken cancellationToken)
     {
         using var scope = scopeFactory.CreateScope();
+        // No signed-in user: the Item's owner isn't known until we've read
+        // its accounts, so this runs in the system scope (#119).
+        using var system = DbSystemScope.Enter();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         // No signed-in user here; the Item decides whose accounts these are.
