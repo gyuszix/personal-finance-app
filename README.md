@@ -123,6 +123,21 @@ Protection format, and reading them needs its key ring
 (`DataProtection__KeysPath`, a persistent directory every instance can
 read) until `rewrap-secrets` has upgraded them.
 
+## Observability
+
+Structured logs with **Serilog**, traces and metrics with **OpenTelemetry** (#121).
+
+```bash
+docker compose up -d aspire-dashboard          # UI on http://localhost:18888
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 dotnet run --project src/PersonalFinance.Api
+```
+
+- **Logs**: one summary line per request (`HTTP GET /api/v1/transactions responded 200 in 4.1 ms`, with user id, status and elapsed time as properties) plus the app's own events. Readable in Development, and compact JSON (`@t`, `@m`, `@tr` trace id, `@sp` span id) everywhere else, ready for any log pipeline. Framework chatter is filtered to warnings.
+- **Traces**: ASP.NET Core requests, Plaid HTTP calls and every Npgsql command, plus custom `plaid.sync_item` (account count, added/modified/removed) and `plaid.webhook` (verification result, type/code) spans. A webhook-triggered sync shows the whole chain.
+- **Metrics**: ASP.NET Core, HttpClient and .NET runtime, plus `personalfinance.plaid.transactions_synced`, `personalfinance.plaid.item_syncs` (ok/error), `personalfinance.plaid.webhooks` (by verification result) and `personalfinance.audit.events` (by type). An alert on `auth.refresh.reuse_detected` would catch token theft as it happens.
+- **No secrets**: request logs record the path without the query string (SignalR sends `?access_token=` there), spans drop `url.query`, and nothing logs headers or bodies. `TelemetryTests` checks this.
+- With `OTEL_EXPORTER_OTLP_ENDPOINT` unset, nothing is exported and logs go to the console only.
+
 ## Dashboard
 
 The Dashboard is a set of cards in tabs (Spending, Cash Flow, Savings, Debt,

@@ -4,6 +4,7 @@ using Going.Plaid.Transactions;
 using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Entities;
+using PersonalFinance.Api.Observability;
 
 namespace PersonalFinance.Api.Services;
 
@@ -25,6 +26,9 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
     if (itemAccounts.Select(a => a.PlaidAccessToken).Distinct().Count() > 1)
       throw new ArgumentException("All accounts must belong to the same Plaid Item", nameof(itemAccounts));
 
+    using var activity = Telemetry.Source.StartActivity("plaid.sync_item");
+    activity?.SetTag("plaid.item.account_count", itemAccounts.Count);
+    activity?.SetTag("plaid.item.id", itemAccounts[0].PlaidItemId);
     try
     {
       // One DB transaction per Item sync: the transactions, balances and the
@@ -34,10 +38,20 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
       if (lockedAccounts.Count == 0) return (0, 0, 0);
       var result = await SyncItemCoreAsync(lockedAccounts);
       await tx.CommitAsync();
+
+      activity?.SetTag("plaid.sync.added", result.added);
+      activity?.SetTag("plaid.sync.modified", result.modified);
+      activity?.SetTag("plaid.sync.removed", result.removed);
+      Telemetry.TransactionsSynced.Add(result.added, new KeyValuePair<string, object?>("change", "added"));
+      Telemetry.TransactionsSynced.Add(result.modified, new KeyValuePair<string, object?>("change", "modified"));
+      Telemetry.TransactionsSynced.Add(result.removed, new KeyValuePair<string, object?>("change", "removed"));
+      Telemetry.ItemSyncs.Add(1, new KeyValuePair<string, object?>("outcome", "ok"));
       return result;
     }
-    catch
+    catch (Exception ex)
     {
+      activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.GetType().Name);
+      Telemetry.ItemSyncs.Add(1, new KeyValuePair<string, object?>("outcome", "error"));
       // Callers sync several Items on one DbContext and carry on past a
       // failure, so drop anything this Item staged but never saved - or the
       // next Item's SaveChangesAsync would persist it (half a page of

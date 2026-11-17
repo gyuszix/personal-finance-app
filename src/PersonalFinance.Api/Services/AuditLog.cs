@@ -34,6 +34,7 @@ public class AuditLog(AppDbContext db, IHttpContextAccessor http, TimeProvider t
                     {auditEvent.UserAgent}, CAST({auditEvent.Details} AS jsonb))
             """, cancellationToken);
 
+        Observability.Telemetry.AuditEvents.Add(1, new KeyValuePair<string, object?>("type", eventType));
         logger.LogInformation(
             "Audit {AuditEventType} for user {UserId} from {IpAddress}: {AuditDetails}",
             eventType, userId, auditEvent.IpAddress, auditEvent.Details);
