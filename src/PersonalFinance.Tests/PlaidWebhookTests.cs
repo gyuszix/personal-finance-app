@@ -79,7 +79,7 @@ public class PlaidWebhookTests : IClassFixture<FakePlaidWebApplicationFactory>
         var itemId = $"item-{Guid.NewGuid():N}";
         var plaidAccountId = $"acc-{Guid.NewGuid():N}";
         var protector = _factory.Services.GetRequiredService<PlaidTokenProtector>();
-        var account = await user.AddAccountAsync(accessToken: protector.Protect("access-sandbox-webhook"), plaidAccountId: plaidAccountId);
+        var account = await user.AddAccountAsync(accessToken: protector.Protect("access-sandbox-webhook", user.Id), plaidAccountId: plaidAccountId);
         using (var scope = _factory.SystemScope())
         {
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Accounts.IgnoreQueryFilters()

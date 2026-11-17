@@ -20,7 +20,7 @@ public class PlaidSyncTests(FakePlaidWebApplicationFactory factory) : IClassFixt
         var plaidAccountId = $"acc-{Guid.NewGuid():N}";
         var protector = factory.Services.GetRequiredService<PlaidTokenProtector>();
         var account = await user.AddAccountAsync(
-            accessToken: protector.Protect($"access-sandbox-{Guid.NewGuid():N}"), plaidAccountId: plaidAccountId);
+            accessToken: protector.Protect($"access-sandbox-{Guid.NewGuid():N}", user.Id), plaidAccountId: plaidAccountId);
         Plaid.Balances("item-1", (plaidAccountId, 123.45m));
         return (user, account, plaidAccountId);
     }

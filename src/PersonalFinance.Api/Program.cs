@@ -39,6 +39,20 @@ if (!builder.Environment.IsEnvironment("Testing"))
 // ── Build ─────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
+// ── One-off commands ──────────────────────────────────────────────────────────
+// `dotnet run --project src/PersonalFinance.Api -- rewrap-secrets`: key
+// rotation, moving every stored secret onto the current KEK (#120).
+if (args.FirstOrDefault() == "rewrap-secrets")
+{
+    using var scope = app.Services.CreateScope();
+    var report = await scope.ServiceProvider.GetRequiredService<PersonalFinance.Api.Services.Encryption.SecretRewrapper>().RewrapAllAsync();
+    Console.WriteLine($"Plaid tokens re-wrapped: {report.PlaidTokensRewrapped}");
+    Console.WriteLine($"Identity tokens re-wrapped: {report.IdentityTokensRewrapped}");
+    Console.WriteLine($"Failed: {report.Failed}");
+    Console.WriteLine("Secrets by key now: " + string.Join(", ", report.RemainingByKeyId.Select(kv => $"{kv.Key}={kv.Value}")));
+    return report.Failed == 0 ? 0 : 1;
+}
+
 // ── Seed database & roles ─────────────────────────────────────────────────────
 using (var scope = app.Services.CreateScope())
 {
@@ -130,5 +144,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.Run();
+return 0;
 
 public partial class Program { }

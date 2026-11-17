@@ -28,7 +28,7 @@ The MAUI client talks to the ASP.NET Core backend over REST (plus a SignalR hub 
 
 - **Transport:** plain HTTP to `localhost` in local development. **Planned:** HTTPS-only with HSTS once the API is hosted, and an encrypted offline cache.
 - **Sync:** Plaid data is mirrored into Postgres and served from there. Cursor-based transaction sync (`/transactions/sync`), balances refreshed on each sync. Each Item syncs in one DB transaction holding a row lock on its accounts: concurrent syncs of the same bank queue up and continue from each other's cursor, the cursor commits only together with the changes it produced, and added/modified are upserts on the unique Plaid transaction ID. A replayed or duplicated page never double-counts (#114). Plaid webhooks (`SYNC_UPDATES_AVAILABLE`) trigger a sync of just that Item, but only after the signed `Plaid-Verification` JWT checks out: ES256 only, a current Plaid key, at most 5 minutes old, and a body hash matching what we received (#118).
-- **Auth:** 10-minute JWT access tokens + refresh tokens that rotate on every use, stored only as SHA-256 hashes, grouped into a family per login (7 days per token, 30 days per session). Reusing an already-rotated refresh token revokes that session's family, not the user's other devices. The native app keeps its refresh token in the OS keychain. Browser clients get it in an `HttpOnly; Secure; SameSite=Strict` cookie instead (`?useCookies=true`) (#115). Optional TOTP two-factor authentication with one-time recovery codes. Wrong passwords and codes share a lockout (5 tries per 15 minutes), and an accepted TOTP code can't be replayed (#117). Security events are written to an append-only audit log the user can see (#116). Plaid access tokens encrypted at rest with ASP.NET Core Data Protection.
+- **Auth:** 10-minute JWT access tokens + refresh tokens that rotate on every use, stored only as SHA-256 hashes, grouped into a family per login (7 days per token, 30 days per session). Reusing an already-rotated refresh token revokes that session's family, not the user's other devices. The native app keeps its refresh token in the OS keychain. Browser clients get it in an `HttpOnly; Secure; SameSite=Strict` cookie instead (`?useCookies=true`) (#115). Optional TOTP two-factor authentication with one-time recovery codes. Wrong passwords and codes share a lockout (5 tries per 15 minutes), and an accepted TOTP code can't be replayed (#117). Security events are written to an append-only audit log the user can see (#116). Plaid access tokens, TOTP secrets and recovery codes are envelope-encrypted at rest: a random data key per secret, wrapped by a key-encryption key that lives in configuration, never in the database, with a re-wrap command for key rotation (#120, [`docs/KEY_MANAGEMENT.md`](docs/KEY_MANAGEMENT.md)).
 - **Categorization:** Plaid's `personal_finance_category` taxonomy.
 - **API:** versioned `/api/v1/` minimal APIs, offset pagination, per-user isolation in two layers: EF Core global query filters on `UserId` for accounts, transactions, balance snapshots and budgets (failing closed when no user is signed in), and behind them **Postgres row-level security** on the same tables, with the API running as a role it applies to (#119, see [Database roles](#database-roles)). **Planned:** keyset (cursor) pagination.
 - **Deployment:** local only for now. Postgres runs in Docker via `docker-compose`; the API runs with `dotnet run`. **Planned:** containerise the API.
@@ -60,6 +60,9 @@ dotnet user-secrets set "Jwt:Audience" "PersonalFinance.Api"
 dotnet user-secrets set "Plaid:ClientId" "<your Plaid sandbox client id>"
 dotnet user-secrets set "Plaid:Secret" "<your Plaid sandbox secret>"
 dotnet user-secrets set "Plaid:Environment" "sandbox"
+# key-encryption key for stored secrets (docs/KEY_MANAGEMENT.md):
+dotnet user-secrets set "Encryption:Keys:k1" "$(../../scripts/new-kek.sh)"
+dotnet user-secrets set "Encryption:CurrentKeyId" "k1"
 # optional - only when Plaid can reach the API (a deployment, or a tunnel):
 # dotnet user-secrets set "Plaid:WebhookUrl" "https://<public-host>/api/v1/plaid/webhook"
 ```
@@ -108,20 +111,17 @@ Unset or empty falls back to the local default.
 
 ### Running the API anywhere but your own machine
 
-Stored Plaid access tokens are encrypted with ASP.NET Core Data
-Protection. By default its keys live in `~/.aspnet/DataProtection-Keys`,
-which is fine locally but is lost with a container and isn't shared
-between instances - and without the keys, every stored token stops
-decrypting and every sync fails until each bank is re-linked. Point it at
-a persistent directory every instance can read:
+Stored secrets are encrypted with a **key-encryption key** from
+configuration (`Encryption:Keys:<id>` + `Encryption:CurrentKeyId`). Give
+every instance the same keys through the platform's secret store, never
+the image or the repo, and keep them as safe as the database backups,
+because without them nothing decrypts. Rotation is three steps and needs
+no downtime: see [`docs/KEY_MANAGEMENT.md`](docs/KEY_MANAGEMENT.md).
 
-```bash
-DataProtection__KeysPath=/var/lib/personalfinance/keys
-```
-
-The key files aren't encrypted at rest - protect that directory like the
-database. Don't change the app's content root/application name without a
-plan either: that also makes existing tokens unreadable.
+Plaid tokens stored before #120 are still in the ASP.NET Core Data
+Protection format, and reading them needs its key ring
+(`DataProtection__KeysPath`, a persistent directory every instance can
+read) until `rewrap-secrets` has upgraded them.
 
 ## Dashboard
 
@@ -257,5 +257,6 @@ way public repos leak secrets to a malicious PR).
 - [`CHANGELOG.md`](CHANGELOG.md) — what shipped, by version
 - [`API.md`](API.md) — full endpoint reference (request/response shapes, auth flow) for building against this backend without reading its source
 - [`docs/PLAID_SANDBOX.md`](docs/PLAID_SANDBOX.md) — Plaid Sandbox test credentials for local/GUI development
+- [`docs/KEY_MANAGEMENT.md`](docs/KEY_MANAGEMENT.md) — envelope encryption of stored secrets, where the keys live, and KEK rotation
 - [`docs/DB_INDEXES.md`](docs/DB_INDEXES.md) — why each index exists, with before/after `EXPLAIN ANALYZE` at 1M transactions and how to re-run the benchmark
 - [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — the Postgres and GitHub MCP servers configured in [`.mcp.json`](.mcp.json), the read-only database role they rely on, and the version pins needed to install them

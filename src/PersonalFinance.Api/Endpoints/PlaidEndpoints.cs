@@ -75,7 +75,7 @@ public static class PlaidEndpoints
                 AccessToken = accessToken
             });
 
-            var protectedAccessToken = protector.Protect(accessToken);
+            var protectedAccessToken = protector.Protect(accessToken, userId);
 
             var institutionId = accountsResponse.Item.InstitutionId;
             var bankName = await institutions.GetNameAsync(institutionId) ?? institutionId ?? "Unknown";

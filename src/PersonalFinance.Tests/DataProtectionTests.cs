@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,10 +23,13 @@ public class DataProtectionTests(TestWebApplicationFactory factory) : IClassFixt
                         ["DataProtection:KeysPath"] = keysPath
                     })));
 
-            var protector = configured.Services.GetRequiredService<PlaidTokenProtector>();
-            var token = protector.Protect("access-sandbox-123");
+            // Data Protection now only reads tokens stored before envelope
+            // encryption (#120) - its key ring still has to survive for that.
+            var legacy = configured.Services.GetRequiredService<IDataProtectionProvider>()
+                .CreateProtector(PlaidTokenProtector.LegacyPurpose);
+            var token = legacy.Protect("access-sandbox-123");
 
-            Assert.Equal("access-sandbox-123", protector.Unprotect(token));
+            Assert.Equal("access-sandbox-123", configured.Services.GetRequiredService<PlaidTokenProtector>().Unprotect(token, "any-user"));
             Assert.NotEmpty(Directory.GetFiles(keysPath, "key-*.xml"));
         }
         finally
