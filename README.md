@@ -187,11 +187,26 @@ Shared styles in [`Styles.xaml`](src/PersonalFinance.App/Resources/Styles/Styles
 big number), `Caption`, `ErrorText`, `Card` (a `Border`), and `GhostButton` /
 `IconButton` next to the default Torii button.
 
+## Tests
+
+```bash
+scripts/test.sh                      # restore, vulnerable-package check, build, test - same as CI
+scripts/test.sh --filter BudgetTests # extra args go to dotnet test
+```
+
+The integration tests run against a **real Postgres 16**, not an in-memory
+stand-in. [Testcontainers](https://dotnet.testcontainers.org/) starts one
+throwaway container per test run, and each test class gets its own empty
+database built from the real EF Core migrations, so a broken migration
+fails the suite (#111). Docker has to be running. Nothing else needs
+setting up, and your local `docker compose` database isn't touched.
+
 ## CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds and runs the
 test suite (`PersonalFinance.Tests`, which pulls in `Api` and `Shared`) on
-every push/PR to `main`. The MAUI `App` project is intentionally excluded -
+every push/PR to `main`, against Postgres via Testcontainers on the
+runner's Docker. The MAUI `App` project is intentionally excluded -
 it needs mobile workloads the runner doesn't have and isn't covered by tests.
 The build also fails on any known-vulnerable NuGet package in that graph
 (`dotnet list package --vulnerable --include-transitive`); run the same

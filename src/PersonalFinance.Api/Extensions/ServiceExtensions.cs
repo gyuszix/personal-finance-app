@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -28,27 +27,11 @@ public static class ServiceExtensions
     {
         services.AddHttpContextAccessor();
 
-        if (env.IsEnvironment("Testing"))
-        {
-            // An in-memory SQLite database only lives as long as at least one
-            // connection to it stays open. EF Core opens and closes a connection
-            // per operation, so if we handed it a connection *string* the DB (and
-            // its schema) would be thrown away the moment EnsureCreated() finished.
-            // Instead we open a single connection here and keep it alive for the
-            // whole app lifetime, then hand that same connection to every DbContext.
-            // The name is unique per app instance: shared-cache memory DBs are
-            // process-wide by name, so test classes running in parallel (one
-            // factory each) would otherwise race to create the same schema.
-            var connection = new SqliteConnection($"DataSource=testdb-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
-            connection.Open();
-            services.AddSingleton(connection);
-            services.AddDbContext<AppDbContext>(options => options.UseSqlite(connection));
-        }
-        else
-        {
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseNpgsql(config.GetConnectionString("Default")));
-        }
+        // Postgres everywhere, tests included (Testcontainers, #111) - SQLite
+        // didn't enforce numeric precision, run our migrations, or support
+        // the Postgres features later issues rely on (RLS, row locks).
+        services.AddDbContext<AppDbContext>(options =>
+            options.UseNpgsql(config.GetConnectionString("Default")));
 
         return services;
     }
