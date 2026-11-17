@@ -30,7 +30,7 @@ The MAUI client talks to the ASP.NET Core backend over REST (plus a SignalR hub 
 - **Sync:** Plaid data is mirrored into Postgres and served from there. Cursor-based transaction sync (`/transactions/sync`), balances refreshed on each sync. Each Item syncs in one DB transaction holding a row lock on its accounts: concurrent syncs of the same bank queue up and continue from each other's cursor, the cursor commits only together with the changes it produced, and added/modified are upserts on the unique Plaid transaction ID. A replayed or duplicated page never double-counts (#114). Plaid webhooks (`SYNC_UPDATES_AVAILABLE`) trigger a sync of just that Item, but only after the signed `Plaid-Verification` JWT checks out: ES256 only, a current Plaid key, at most 5 minutes old, and a body hash matching what we received (#118).
 - **Auth:** 10-minute JWT access tokens + refresh tokens that rotate on every use, stored only as SHA-256 hashes, grouped into a family per login (7 days per token, 30 days per session). Reusing an already-rotated refresh token revokes that session's family, not the user's other devices. The native app keeps its refresh token in the OS keychain. Browser clients get it in an `HttpOnly; Secure; SameSite=Strict` cookie instead (`?useCookies=true`) (#115). Optional TOTP two-factor authentication with one-time recovery codes. Wrong passwords and codes share a lockout (5 tries per 15 minutes), and an accepted TOTP code can't be replayed (#117). Security events are written to an append-only audit log the user can see (#116). Plaid access tokens encrypted at rest with ASP.NET Core Data Protection.
 - **Categorization:** Plaid's `personal_finance_category` taxonomy.
-- **API:** versioned `/api/v1/` minimal APIs, offset pagination, per-user isolation via EF Core global query filters on `UserId` for accounts, transactions, balance snapshots and budgets (failing closed when no user is signed in). **Planned:** keyset (cursor) pagination.
+- **API:** versioned `/api/v1/` minimal APIs, offset pagination, per-user isolation in two layers: EF Core global query filters on `UserId` for accounts, transactions, balance snapshots and budgets (failing closed when no user is signed in), and behind them **Postgres row-level security** on the same tables, with the API running as a role it applies to (#119, see [Database roles](#database-roles)). **Planned:** keyset (cursor) pagination.
 - **Deployment:** local only for now. Postgres runs in Docker via `docker-compose`; the API runs with `dotnet run`. **Planned:** containerise the API.
 - **Client:** MVVM (CommunityToolkit), server is the source of truth.
 
@@ -52,7 +52,8 @@ docker compose up -d    # Postgres 16 on localhost:5432, db "personalfinance", u
 Point the API at it via user secrets (run once, from `src/PersonalFinance.Api/`):
 
 ```bash
-dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=personalfinance;Username=postgres"
+dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=personalfinance;Username=pf_app"
+dotnet user-secrets set "ConnectionStrings:Migrations" "Host=localhost;Port=5432;Database=personalfinance;Username=postgres"
 dotnet user-secrets set "Jwt:Key" "<32+ character secret key>"
 dotnet user-secrets set "Jwt:Issuer" "PersonalFinance.Api"
 dotnet user-secrets set "Jwt:Audience" "PersonalFinance.Api"
@@ -63,7 +64,24 @@ dotnet user-secrets set "Plaid:Environment" "sandbox"
 # dotnet user-secrets set "Plaid:WebhookUrl" "https://<public-host>/api/v1/plaid/webhook"
 ```
 
-Then apply migrations: `dotnet ef database update --project src/PersonalFinance.Api`
+Then apply migrations: `dotnet ef database update --project src/PersonalFinance.Api` (EF tooling uses `ConnectionStrings:Migrations`), and let the API's role sign in, once:
+
+```bash
+docker exec personalfinance-postgres psql -U postgres -d personalfinance -c "ALTER ROLE pf_app LOGIN"
+```
+
+### Database roles
+
+The API connects as **`pf_app`**, not as `postgres`, because Postgres row-level security doesn't apply to superusers, `BYPASSRLS` roles or the tables' owner (#119):
+
+| Role | Used by | Can |
+|---|---|---|
+| `postgres` (owner) | `ConnectionStrings:Migrations`: `dotnet ef`, the tests' migrations | Everything, including schema changes |
+| `pf_app` | `ConnectionStrings:Default`: the running API | `SELECT/INSERT/UPDATE/DELETE` on app tables. No DDL, no writes to `__EFMigrationsHistory`, only append/read on `AuditEvents`. **Subject to row-level security** |
+
+The `RowLevelSecurity` migration creates `pf_app` (without a login) if it's missing, and grants it all of the above. Each user table has a policy keyed on `"UserId" = current_setting('app.user_id')`, which `RlsSessionInterceptor` sets from the signed-in user on every connection. Code that has no signed-in user (the scheduled sync, webhook syncs) must enter `DbSystemScope`, and that scope is ignored inside any HTTP request. Anything else sees **no rows**. That means a missed `WHERE "UserId" = ...` or a stray `IgnoreQueryFilters()` is no longer a leak.
+
+At startup the API checks its own role. If it's a superuser, `BYPASSRLS` or the owner, it logs a warning in development and **refuses to start in Production**. Outside local dev, give `pf_app` a password: `ALTER ROLE pf_app LOGIN PASSWORD '...'`.
 
 > **Already have a native Postgres (e.g. Homebrew `postgresql@16`)?** It
 > binds `127.0.0.1:5432`, which beats the container's `0.0.0.0:5432` for

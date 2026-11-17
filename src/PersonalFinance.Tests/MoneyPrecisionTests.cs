@@ -15,7 +15,7 @@ public class MoneyPrecisionTests(TestWebApplicationFactory factory) : IClassFixt
     [Fact]
     public void NoEntity_HasFloatingPointProperties()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var offenders = db.Model.GetEntityTypes()
@@ -30,7 +30,7 @@ public class MoneyPrecisionTests(TestWebApplicationFactory factory) : IClassFixt
     [Fact]
     public void EveryDecimalColumn_HasExplicitPrecision_AndCentsScale()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var decimals = db.Model.GetEntityTypes()
@@ -49,7 +49,7 @@ public class MoneyPrecisionTests(TestWebApplicationFactory factory) : IClassFixt
     [Fact]
     public async Task MoneyColumns_AreNumericWithPrecision_InThePostgresSchema()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var columns = await db.Database.SqlQueryRaw<MoneyColumn>("""

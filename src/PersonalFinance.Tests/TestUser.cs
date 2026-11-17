@@ -28,7 +28,7 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
         var tokens = await login.Content.ReadFromJsonAsync<Tokens>();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens!.Token);
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var user = await scope.ServiceProvider.GetRequiredService<UserManager<User>>().FindByEmailAsync(email);
 
         return new TestUser(factory, user!.Id, client, tokens.Token);
@@ -38,7 +38,7 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
         decimal balance = 100m, string accountType = "Depository", string accessToken = "protected-token",
         string? subtype = null, string? plaidAccountId = null)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var account = new Account
         {
@@ -59,7 +59,7 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
         Account account, decimal amount, string? category = "FOOD_AND_DRINK", DateTime? date = null, bool pending = false,
         string? detailedCategory = null)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var transaction = new Transaction
         {

@@ -64,7 +64,7 @@ public class MfaTests(TestWebApplicationFactory factory) : IClassFixture<TestWeb
     private async Task<MfaUser> UserWithMfaAsync()
     {
         var user = await TestUser.CreateAsync(factory);
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var email = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(u => u.Id == user.Id)).Email!;
 
         var setup = await (await user.Client.PostAsync("/api/v1/auth/mfa/setup", null)).Content.ReadFromJsonAsync<MfaSetupResponse>();
@@ -151,7 +151,7 @@ public class MfaTests(TestWebApplicationFactory factory) : IClassFixture<TestWeb
         var withRightCode = await LoginAsync(user.Email, Totp(user.Secret, stepOffset: 1));
 
         Assert.Equal(HttpStatusCode.Unauthorized, withRightCode.StatusCode);
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var dbUser = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(u => u.Id == user.Id);
         Assert.True(dbUser.LockoutEnd > DateTimeOffset.UtcNow);
     }
@@ -160,7 +160,7 @@ public class MfaTests(TestWebApplicationFactory factory) : IClassFixture<TestWeb
     public async Task WrongPasswords_LockTheAccountToo()
     {
         var user = await TestUser.CreateAsync(factory);
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var email = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(u => u.Id == user.Id)).Email!;
         var client = factory.CreateClient();
 
@@ -198,7 +198,7 @@ public class MfaTests(TestWebApplicationFactory factory) : IClassFixture<TestWeb
         await LoginAsync(user.Email, "123456");
         await LoginAsync(user.Email, recoveryCode: user.RecoveryCodes[1]);
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var types = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents
             .Where(e => e.UserId == user.Id).Select(e => e.EventType).ToListAsync();
         Assert.Contains(AuditEventTypes.MfaEnabled, types);

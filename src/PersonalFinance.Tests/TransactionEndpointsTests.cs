@@ -154,7 +154,9 @@ public class TransactionEndpointsTests(TestWebApplicationFactory factory) : ICla
     }
 
     [Fact]
-    public async Task Delete_SomeoneElsesTransaction_IsForbiddenAndKeepsIt()
+    // Row-level security hides other users' rows entirely, so it's a 404 -
+    // the same as accounts, and no hint that the id exists (#119).
+    public async Task Delete_SomeoneElsesTransaction_IsNotFoundAndKeepsIt()
     {
         var owner = await TestUser.CreateAsync(factory);
         var intruder = await TestUser.CreateAsync(factory);
@@ -162,7 +164,7 @@ public class TransactionEndpointsTests(TestWebApplicationFactory factory) : ICla
 
         var response = await intruder.Client.DeleteAsync($"/api/v1/transactions/{transaction.TransactionId}");
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         var stillThere = await owner.Client.GetFromJsonAsync<PagedResult<TransactionResponse>>("/api/v1/transactions");
         Assert.Single(stillThere!.Items);
     }

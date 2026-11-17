@@ -122,7 +122,7 @@ public class BudgetTests(TestWebApplicationFactory factory) : IClassFixture<Test
         var user = await TestUser.CreateAsync(factory);
         (await PutAsync(user, "TRAVEL", new { monthlyLimit = 500m })).EnsureSuccessStatusCode();
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         Assert.Empty(await db.Budgets.ToListAsync());

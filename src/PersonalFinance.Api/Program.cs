@@ -49,8 +49,13 @@ using (var scope = app.Services.CreateScope())
     // (Everywhere else migrations are applied separately, never on startup.)
     if (app.Environment.IsEnvironment("Testing"))
     {
-        var db = services.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
+        // As the owner (ConnectionStrings:Migrations): the app's own role
+        // can't change the schema (#119).
+        var ownerOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(app.Configuration.GetConnectionString("Migrations") ?? app.Configuration.GetConnectionString("Default"))
+            .Options;
+        await using var owner = new AppDbContext(ownerOptions, new HttpContextAccessor());
+        await owner.Database.MigrateAsync();
     }
     else
     {
@@ -69,6 +74,11 @@ using (var scope = app.Services.CreateScope())
             connection.Database, connection.DataSource, serverVersion);
         await connection.CloseAsync();
     }
+
+    // Row-level security only binds a role that isn't superuser, BYPASSRLS
+    // or the tables' owner (#119).
+    await DatabaseRoleCheck.EnforceAsync(
+        services.GetRequiredService<AppDbContext>(), app.Environment, app.Logger);
 
     // Seed roles in every environment — registration assigns the "User" role,
     // so it must exist before any user can register.

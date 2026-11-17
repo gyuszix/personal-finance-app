@@ -31,7 +31,7 @@ public class BalanceSnapshotTests(TestWebApplicationFactory factory) : IClassFix
         var account = await user.AddAccountAsync();
         await RecordAsync(account.AccountId, balance: 100m);
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         Assert.Empty(await db.BalanceSnapshots.ToListAsync());
@@ -54,7 +54,7 @@ public class BalanceSnapshotTests(TestWebApplicationFactory factory) : IClassFix
     // refreshed balance, saved together.
     private async Task RecordAsync(int accountId, decimal balance)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var account = await db.Accounts.IgnoreQueryFilters().SingleAsync(a => a.AccountId == accountId);
         account.Balance = balance;
@@ -64,7 +64,7 @@ public class BalanceSnapshotTests(TestWebApplicationFactory factory) : IClassFix
 
     private async Task<List<BalanceSnapshot>> SnapshotsForAsync(int accountId)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         return await db.BalanceSnapshots.IgnoreQueryFilters().Where(s => s.AccountId == accountId).ToListAsync();
     }

@@ -14,7 +14,7 @@ public class SchemaIntegrityTests(TestWebApplicationFactory factory) : IClassFix
     [InlineData("Accounts", "IX_Accounts_UserId", "(\"UserId\")")]
     public async Task HotPathIndexes_Exist(string table, string index, string columns)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var definition = await db.Database.SqlQueryRaw<string>(
@@ -28,7 +28,7 @@ public class SchemaIntegrityTests(TestWebApplicationFactory factory) : IClassFix
     [Fact]
     public async Task Transaction_ForAnAccountThatDoesntExist_IsRejected()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Transactions.Add(new Transaction
         {
@@ -46,7 +46,7 @@ public class SchemaIntegrityTests(TestWebApplicationFactory factory) : IClassFix
         var account = await user.AddAccountAsync();
         await user.AddTransactionAsync(account, 10m);
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.BalanceSnapshots.Add(new BalanceSnapshot
         {

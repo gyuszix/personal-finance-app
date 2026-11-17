@@ -11,7 +11,7 @@ public class DatabaseProviderTests(TestWebApplicationFactory factory) : IClassFi
     [Fact]
     public async Task Tests_RunOnPostgres_WithEveryMigrationApplied()
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         Assert.Equal("Npgsql.EntityFrameworkCore.PostgreSQL", db.Database.ProviderName);

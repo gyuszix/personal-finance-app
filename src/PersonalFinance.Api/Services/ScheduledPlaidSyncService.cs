@@ -36,6 +36,9 @@ public class ScheduledPlaidSyncService(
         // scope is needed per run - AppDbContext, PlaidSyncService, and
         // SummaryCache are all scoped/request-lifetime services.
         using var scope = scopeFactory.CreateScope();
+        // Every user's Items: the one place besides webhooks that needs all
+        // rows, so it says so to row-level security (#119).
+        using var system = DbSystemScope.Enter();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var syncService = scope.ServiceProvider.GetRequiredService<PlaidSyncService>();
         var summaryCache = scope.ServiceProvider.GetRequiredService<SummaryCache>();

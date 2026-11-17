@@ -32,8 +32,20 @@ public static class ServiceExtensions
         // Postgres everywhere, tests included (Testcontainers, #111) - SQLite
         // didn't enforce numeric precision, run our migrations, or support
         // the Postgres features later issues rely on (RLS, row locks).
-        services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(config.GetConnectionString("Default")));
+        // The API connects as pf_app, which row-level security applies to;
+        // schema changes need the owner, so EF tooling (dotnet ef) uses
+        // ConnectionStrings:Migrations when it's set (#119).
+        // Read when the options are built, not here, so configuration added
+        // after registration (WebApplicationFactory) is honoured.
+        services.AddSingleton<RlsSessionInterceptor>();
+        services.AddDbContext<AppDbContext>((sp, options) =>
+        {
+            var configuration = sp.GetRequiredService<IConfiguration>();
+            var connectionString = EF.IsDesignTime
+                ? configuration.GetConnectionString("Migrations") ?? configuration.GetConnectionString("Default")
+                : configuration.GetConnectionString("Default");
+            options.UseNpgsql(connectionString).AddInterceptors(sp.GetRequiredService<RlsSessionInterceptor>());
+        });
 
         return services;
     }

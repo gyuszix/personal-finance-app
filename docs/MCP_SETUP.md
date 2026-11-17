@@ -54,6 +54,18 @@ GRANT pg_monitor TO claude_ro;
 - `pg_monitor` is optional and only unlocks the vacuum/connection/cache
   health checks. It is read-only statistics access.
 
+
+**Row-level security (#119).** `claude_ro` isn't the app, so it never sets
+`app.user_id`, and the RLS policies show it **no rows** in `Accounts`,
+`Transactions`, `BalanceSnapshots`, `Budgets` and `AuditEvents` (schema,
+indexes, `EXPLAIN` and other tables still work). That's the safe default.
+To let it read every user's data on a **local** database for debugging, do
+it deliberately (needs a superuser, which the local `postgres` is):
+
+```sql
+ALTER ROLE claude_ro BYPASSRLS;   -- undo: ALTER ROLE claude_ro NOBYPASSRLS;
+```
+
 ### 2. Install the Postgres server
 
 ```bash

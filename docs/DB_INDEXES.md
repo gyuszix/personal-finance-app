@@ -106,6 +106,23 @@ would rather filter the user's rows than use them.
 filter on it, but it excludes only ~2% of rows, so the saving doesn't
 justify a second copy of the main index.
 
+## Under row-level security
+
+Since #119 the API runs as `pf_app` with RLS policies on these tables
+(`BENCH_AS_APP=1 scripts/db/bench.sh`). Every query still uses the same
+indexes, because the EF filter's own `"UserId" = @user` stays indexable.
+One plan changes shape: **Q1** goes from an Index Scan Backward that stops at
+row 50 (0.24 ms) to a Bitmap Index Scan of the user's ~500 rows plus a
+top-N sort (**1.97 ms**). The policy's
+`"UserId" = current_setting(...) OR current_setting('app.rls_bypass') = 'on'`
+has to be checked before the query's own conditions (it's a security
+barrier), and the `OR` stops the planner using the index order to stop
+early. The cost is bounded by the user's own row count, not the table
+size, which is the property the index exists for. If it ever matters,
+the fix is a policy without the `OR`: system jobs would run under a
+separate `BYPASSRLS` role instead of the session flag, which needs a
+superuser to create.
+
 ## Notes
 
 - `UserId` is a 36-character text GUID (ASP.NET Identity's default), which

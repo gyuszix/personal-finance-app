@@ -17,7 +17,7 @@ public class AuditLogTests(FakePlaidWebApplicationFactory factory) : IClassFixtu
 
     private async Task<List<AuditEvent>> EventsForAsync(string? userId)
     {
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         return await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents
             .Where(e => e.UserId == userId).OrderBy(e => e.Id).ToListAsync();
     }
@@ -49,7 +49,7 @@ public class AuditLogTests(FakePlaidWebApplicationFactory factory) : IClassFixtu
 
         await client.PostAsJsonAsync("/api/v1/auth/login", new { email = unknownEmail, password = "Guess123!" });
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var anonymous = await db.AuditEvents
             .Where(e => e.UserId == null && e.EventType == AuditEventTypes.LoginFailed)
@@ -68,7 +68,7 @@ public class AuditLogTests(FakePlaidWebApplicationFactory factory) : IClassFixtu
 
         await client.PostAsJsonAsync("/api/v1/auth/login", new { email, password = "Wrong123!" });
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var userId = (await db.Users.SingleAsync(u => u.Email == email)).Id;
         var failed = Assert.Single(await EventsForAsync(userId));
@@ -91,7 +91,7 @@ public class AuditLogTests(FakePlaidWebApplicationFactory factory) : IClassFixtu
         await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = first.RefreshToken }); // reuse
         await client.PostAsJsonAsync("/api/v1/auth/revoke", new { refreshToken = second.RefreshToken });
 
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.SystemScope();
         var userId = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().Users.SingleAsync(u => u.Email == email)).Id;
         var events = await EventsForAsync(userId);
         Assert.Equal(
@@ -177,10 +177,19 @@ public class AuditLogTests(FakePlaidWebApplicationFactory factory) : IClassFixtu
     {
         await TestUser.CreateAsync(factory); // at least one row
 
-        using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        // Layer 1: the API's role has no UPDATE/DELETE/TRUNCATE on the table (#119).
+        using (var scope = factory.SystemScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var denied = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlRawAsync(sql));
+            Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, denied.SqlState);
+        }
 
-        var error = await Assert.ThrowsAsync<PostgresException>(() => db.Database.ExecuteSqlRawAsync(sql));
+        // Layer 2: even the table's owner is stopped by the trigger (#116).
+        await using var owner = new NpgsqlConnection(factory.OwnerConnectionString);
+        await owner.OpenAsync();
+        await using var command = new NpgsqlCommand(sql, owner);
+        var error = await Assert.ThrowsAsync<PostgresException>(() => command.ExecuteNonQueryAsync());
         Assert.Contains("append-only", error.MessageText);
     }
 }
