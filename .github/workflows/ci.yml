@@ -9,6 +9,10 @@ on:
 # Only the API/Shared/Tests projects are built here - the MAUI `App`
 # project needs mobile workloads (android/ios/maccatalyst) that aren't
 # installed on this runner, and isn't exercised by the test suite.
+#
+# Integration tests run against a real Postgres 16 that Testcontainers
+# starts on the runner's Docker (#111) - nothing to configure here.
+# scripts/test.sh runs these same steps locally.
 
 jobs:
   build-and-test:
@@ -46,8 +50,8 @@ jobs:
       - name: Build
         run: dotnet build src/PersonalFinance.Tests/PersonalFinance.Tests.csproj --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test src/PersonalFinance.Tests/PersonalFinance.Tests.csproj --no-build --configuration Release
+      - name: Test (Postgres via Testcontainers)
+        run: dotnet test src/PersonalFinance.Tests/PersonalFinance.Tests.csproj --no-build --configuration Release --logger "trx;LogFileName=results.trx"
         env:
           # Sourced from repo secrets (Settings > Secrets and variables > Actions),
           # never committed. Double-underscore maps to nested config keys, i.e.
@@ -58,3 +62,10 @@ jobs:
           Plaid__ClientId: ${{ secrets.PLAID_CLIENT_ID }}
           Plaid__Secret: ${{ secrets.PLAID_SECRET }}
           Plaid__Environment: sandbox
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: src/PersonalFinance.Tests/TestResults/*.trx

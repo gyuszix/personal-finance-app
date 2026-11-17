@@ -28,7 +28,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 // Skip the scheduled sync job in Testing - integration tests spin up a
-// fresh, empty in-memory DB each run, so it would just be dead weight
+// fresh, empty database per test class, so it would just be dead weight
 // (0 accounts to sync), and keeping it out avoids any background noise
 // during test runs entirely.
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -44,12 +44,13 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
 
-    // In Testing we run on a fresh in-memory SQLite DB, so build the schema here.
-    // (Production applies EF Core migrations separately.)
+    // Tests get a fresh, empty Postgres database per factory (#111), so build
+    // it from the real migrations - a broken migration fails the suite.
+    // (Everywhere else migrations are applied separately, never on startup.)
     if (app.Environment.IsEnvironment("Testing"))
     {
         var db = services.GetRequiredService<AppDbContext>();
-        db.Database.EnsureCreated();
+        await db.Database.MigrateAsync();
     }
     else
     {
