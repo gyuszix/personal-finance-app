@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PersonalFinance.App.ViewModels"
+             x:Class="PersonalFinance.App.Views.RulesPage"
+             x:DataType="vm:RulesViewModel"
+             x:Name="Page"
+             Title="Rules">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,32" Spacing="16" MaximumWidthRequest="720">
+            <Label Text="Categorisation rules" Style="{StaticResource Headline}" />
+            <Label Text="When Plaid gets a category wrong, a rule fixes it for every matching transaction, past and future. Delete the rule and they go back to Plaid's category."
+                   TextColor="{StaticResource TextMuted}" />
+
+            <!-- New rule -->
+            <Border Style="{StaticResource Card}" Padding="16">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="New rule" Style="{StaticResource SubHeadline}" />
+                    <Grid ColumnDefinitions="Auto, *" ColumnSpacing="8">
+                        <Picker ItemsSource="{Binding MatchTypes}" SelectedItem="{Binding SelectedMatchType}"
+                                SemanticProperties.Description="How to match the description" />
+                        <Border Grid.Column="1" Padding="10,0" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Entry Text="{Binding Pattern}" Placeholder="Description text, e.g. PURE GYM"
+                                   SemanticProperties.Description="Text to match in the description" />
+                        </Border>
+                    </Grid>
+                    <Picker Title="Category" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" />
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="8">
+                        <Border Padding="10,0" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Entry Text="{Binding MinAmountText}" Keyboard="Numeric" Placeholder="Min amount (optional)" />
+                        </Border>
+                        <Border Grid.Column="1" Padding="10,0" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Entry Text="{Binding MaxAmountText}" Keyboard="Numeric" Placeholder="Max amount (optional)" />
+                        </Border>
+                    </Grid>
+                    <Label Text="Amounts as your bank reports them: spending is positive, money in is negative."
+                           Style="{StaticResource Caption}" />
+                    <Button Text="Save rule" Command="{Binding SaveCommand}" />
+                    <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
+                    <Label Text="{Binding StatusMessage}" TextColor="{StaticResource Positive}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" />
+
+            <!-- Existing rules, in the order they're tried -->
+            <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Rules}">
+                <BindableLayout.EmptyView>
+                    <Label Text="No rules yet." Style="{StaticResource Caption}" />
+                </BindableLayout.EmptyView>
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RuleItem">
+                        <Border Style="{StaticResource Card}" Padding="12">
+                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="8">
+                                <Label Text="{Binding Summary}" />
+                                <Label Grid.Row="1" Text="{Binding Detail}" Style="{StaticResource Caption}" />
+                                <Button Grid.Column="1" Grid.RowSpan="2" Text="Delete" Style="{StaticResource GhostButton}"
+                                        VerticalOptions="Center"
+                                        Command="{Binding Source={x:Reference Page}, Path=BindingContext.DeleteCommand, x:DataType=ContentPage}"
+                                        CommandParameter="{Binding .}" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

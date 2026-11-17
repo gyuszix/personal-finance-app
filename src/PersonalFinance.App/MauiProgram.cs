@@ -103,6 +103,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AccountsViewModel>();
         builder.Services.AddTransient<BudgetsViewModel>();
         builder.Services.AddTransient<SecurityViewModel>();
+        builder.Services.AddTransient<RulesViewModel>();
 
         // Views
         builder.Services.AddTransient<LoginPage>();
@@ -111,6 +112,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AccountsPage>();
         builder.Services.AddTransient<BudgetsPage>();
         builder.Services.AddTransient<SecurityPage>();
+        builder.Services.AddTransient<RulesPage>();
 
 		//Regiester ViewModel
 		builder.Services.AddTransient<RegisterViewModel>();

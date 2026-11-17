@@ -40,6 +40,7 @@ public class RowLevelSecurityTests(TestWebApplicationFactory factory) : IClassFi
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.BalanceSnapshots.Add(new BalanceSnapshot { AccountId = account.AccountId, UserId = user.Id, Date = DateOnly.FromDateTime(DateTime.UtcNow), Balance = 1m });
             db.Budgets.Add(new Budget { UserId = user.Id, Category = "FOOD_AND_DRINK", MonthlyLimit = 100m });
+            db.CategoryRules.Add(new CategoryRule { UserId = user.Id, Pattern = "gym", MatchType = "contains", Category = "PERSONAL_CARE", CreatedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();
         }
         return (alice, bob);
@@ -68,6 +69,8 @@ public class RowLevelSecurityTests(TestWebApplicationFactory factory) : IClassFi
         Assert.All(await db.Transactions.IgnoreQueryFilters().ToListAsync(), t => Assert.Equal(alice.Id, t.UserId));
         Assert.All(await db.BalanceSnapshots.IgnoreQueryFilters().ToListAsync(), s => Assert.Equal(alice.Id, s.UserId));
         Assert.All(await db.Budgets.IgnoreQueryFilters().ToListAsync(), b => Assert.Equal(alice.Id, b.UserId));
+        Assert.All(await db.CategoryRules.IgnoreQueryFilters().ToListAsync(), r => Assert.Equal(alice.Id, r.UserId));
+        Assert.NotEmpty(await db.CategoryRules.IgnoreQueryFilters().ToListAsync());
         Assert.NotEmpty(await db.Transactions.IgnoreQueryFilters().ToListAsync());
     }
 

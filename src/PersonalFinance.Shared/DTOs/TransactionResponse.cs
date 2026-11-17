@@ -7,4 +7,9 @@ public class TransactionResponse
     public string Description { get; set; }
     public DateTime Date { get; set; }
     public string? CategoryPrimary { get; set; }
+
+    // Set when one of the user's rules re-categorised it (#124): what Plaid
+    // said, and which rule changed it.
+    public string? PlaidCategoryPrimary { get; set; }
+    public int? CategoryRuleId { get; set; }
 }

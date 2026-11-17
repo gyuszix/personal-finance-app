@@ -9,7 +9,7 @@
 
     <Grid RowDefinitions="Auto, Auto, Auto, Auto, *">
 
-        <Grid Grid.Row="0" ColumnDefinitions="*, Auto" Padding="15,12,15,0" ColumnSpacing="12">
+        <Grid Grid.Row="0" ColumnDefinitions="*, Auto, Auto" Padding="15,12,15,0" ColumnSpacing="12">
             <Picker Grid.Column="0"
                     Title="Category"
                     ItemsSource="{Binding Categories}"
@@ -19,6 +19,10 @@
                     Style="{StaticResource GhostButton}"
                     Command="{Binding LoadTransactionsCommand}"
                     IsEnabled="{Binding IsNotLoading}" />
+            <Button Grid.Column="2"
+                    Text="Rules"
+                    Style="{StaticResource GhostButton}"
+                    Command="{Binding OpenRulesCommand}" />
         </Grid>
 
         <Label Grid.Row="1"

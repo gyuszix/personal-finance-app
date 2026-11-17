@@ -29,6 +29,15 @@ public interface IPersonalFinanceApi
     [Get("/api/v1/audit")]
     Task<ApiResponse<PagedResult<AuditEventResponse>>> GetAuditEventsAsync([Query] int page, [Query] int pageSize);
 
+    [Get("/api/v1/rules")]
+    Task<ApiResponse<List<CategoryRuleResponse>>> GetRulesAsync();
+
+    [Post("/api/v1/rules")]
+    Task<ApiResponse<CategoryRuleResponse>> CreateRuleAsync([Body] CategoryRuleRequest request);
+
+    [Delete("/api/v1/rules/{id}")]
+    Task<IApiResponse> DeleteRuleAsync(int id);
+
     [Post("/api/v1/auth/refresh")]
     Task<ApiResponse<TokenResponse>> RefreshAsync([Body] RefreshTokenRequest request);
 

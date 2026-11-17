@@ -305,6 +305,59 @@ namespace PersonalFinance.Api.Migrations
                     b.ToTable("Budgets");
                 });
 
+            modelBuilder.Entity("PersonalFinance.Api.Entities.CategoryRule", b =>
+                {
+                    b.Property<int>("CategoryRuleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CategoryRuleId"));
+
+                    b.Property<int?>("AccountId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MatchType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<decimal?>("MaxAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("MinAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("CategoryRuleId");
+
+                    b.HasIndex("AccountId");
+
+                    b.HasIndex("UserId", "Priority");
+
+                    b.ToTable("CategoryRules");
+                });
+
             modelBuilder.Entity("PersonalFinance.Api.Entities.RefreshToken", b =>
                 {
                     b.Property<int>("Id")
@@ -375,6 +428,9 @@ namespace PersonalFinance.Api.Migrations
                     b.Property<string>("CategoryPrimary")
                         .HasColumnType("text");
 
+                    b.Property<int?>("CategoryRuleId")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
@@ -388,6 +444,9 @@ namespace PersonalFinance.Api.Migrations
                     b.Property<string>("PendingTransactionId")
                         .HasColumnType("text");
 
+                    b.Property<string>("PlaidCategoryPrimary")
+                        .HasColumnType("text");
+
                     b.Property<string>("PlaidTransactionId")
                         .IsRequired()
                         .HasColumnType("text");
@@ -399,6 +458,8 @@ namespace PersonalFinance.Api.Migrations
                     b.HasKey("TransactionId");
 
                     b.HasIndex("AccountId");
+
+                    b.HasIndex("CategoryRuleId");
 
                     b.HasIndex("PlaidTransactionId")
                         .IsUnique();
@@ -532,6 +593,14 @@ namespace PersonalFinance.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PersonalFinance.Api.Entities.CategoryRule", b =>
+                {
+                    b.HasOne("PersonalFinance.Api.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
             modelBuilder.Entity("PersonalFinance.Api.Entities.Transaction", b =>
                 {
                     b.HasOne("PersonalFinance.Api.Entities.Account", null)
@@ -539,6 +608,11 @@ namespace PersonalFinance.Api.Migrations
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("PersonalFinance.Api.Entities.CategoryRule", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryRuleId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 #pragma warning restore 612, 618
         }

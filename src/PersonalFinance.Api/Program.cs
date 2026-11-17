@@ -158,6 +158,7 @@ apiV1.MapInsightEndpoints();
 apiV1.MapBudgetEndpoints();
 apiV1.MapAuditEndpoints();
 apiV1.MapMfaEndpoints();
+apiV1.MapCategoryRuleEndpoints();
 
 app.MapHub<TransactionsHub>("/hubs/transactions");
 app.MapHealthEndpoints();
