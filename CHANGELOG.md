@@ -109,6 +109,11 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- Transactions are indexed on `(UserId, Date)` and Accounts on `UserId`:
+  every per-user read used to scan the whole table. At 1M transactions
+  the first page of `/transactions` drops from 14,458 buffers / 19 ms to
+  53 buffers / 0.24 ms. Plans, the benchmark script and the indexes
+  considered and rejected are in `docs/DB_INDEXES.md` (#113)
 - Money columns have an explicit precision: `Transactions.Amount`,
   `Accounts.Balance` and `BalanceSnapshots.Balance` were unconstrained
   `numeric` and are now `numeric(18,2)` (migration `MoneyPrecision`). A
@@ -142,6 +147,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- `Transactions` and `BalanceSnapshots` now have real foreign keys to
+  `Accounts` (cascade on delete). There were none, so an orphaned row
+  could stay in a user's totals. Existing orphans are removed by the
+  migration (#113)
 - Cash flow no longer counts credit card payments: paying the card from
   checking was counted as spending on top of the card purchases it paid
   for, and the payment landing on the card as income. Which transactions

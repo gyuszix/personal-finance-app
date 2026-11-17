@@ -237,4 +237,5 @@ way public repos leak secrets to a malicious PR).
 - [`CHANGELOG.md`](CHANGELOG.md) — what shipped, by version
 - [`API.md`](API.md) — full endpoint reference (request/response shapes, auth flow) for building against this backend without reading its source
 - [`docs/PLAID_SANDBOX.md`](docs/PLAID_SANDBOX.md) — Plaid Sandbox test credentials for local/GUI development
+- [`docs/DB_INDEXES.md`](docs/DB_INDEXES.md) — why each index exists, with before/after `EXPLAIN ANALYZE` at 1M transactions and how to re-run the benchmark
 - [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md) — the Postgres and GitHub MCP servers configured in [`.mcp.json`](.mcp.json), the read-only database role they rely on, and the version pins needed to install them
