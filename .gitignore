@@ -7,3 +7,6 @@ appsettings.Development.json
 appsettings.*.local.json
 *.pfx
 .DS_Store
+
+# docker compose secrets (#122) - .env.example is the template
+.env

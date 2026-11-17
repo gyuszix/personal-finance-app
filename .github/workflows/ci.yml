@@ -69,3 +69,11 @@ jobs:
         with:
           name: test-results
           path: src/PersonalFinance.Tests/TestResults/*.trx
+
+  # The API image builds (#122). Not pushed anywhere.
+  docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the API image
+        run: docker build --tag personalfinance-api:ci .

@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- The API runs in Docker: a multi-stage image (`docker build .`) that
+  runs as a non-root user, with a `migrate` command (migrations as the
+  schema owner, then `pf_app`'s login, with no EF tooling needed) and
+  `/health/live` + `/health/ready` probes. `docker compose up --build`
+  with a `.env` (template: `.env.example`) now starts Postgres,
+  migrations, the API on :5140 and the Aspire dashboard. CI also builds
+  the image (#122)
 - Observability: Serilog structured logging (one summary line per
   request, compact JSON outside Development with trace and span ids) and
   OpenTelemetry traces (ASP.NET Core, Plaid HTTP calls, Npgsql, custom
