@@ -109,6 +109,12 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- Money columns have an explicit precision: `Transactions.Amount`,
+  `Accounts.Balance` and `BalanceSnapshots.Balance` were unconstrained
+  `numeric` and are now `numeric(18,2)` (migration `MoneyPrecision`). A
+  test fails the build if any entity or Shared DTO gains a
+  `float`/`double` property, or a `decimal` column without precision
+  (#112)
 - Dashboard uses the full window: cards flow into 1-3 even columns by
   window width instead of a 720px centred strip, with larger figures,
   card padding and charts (#107)

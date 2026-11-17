@@ -17,7 +17,7 @@ namespace PersonalFinance.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -167,7 +167,8 @@ namespace PersonalFinance.Api.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("Balance")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("BankName")
                         .IsRequired()
@@ -211,7 +212,8 @@ namespace PersonalFinance.Api.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Balance")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
@@ -304,7 +306,8 @@ namespace PersonalFinance.Api.Migrations
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("numeric");
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
 
                     b.Property<string>("CategoryDetailed")
                         .HasColumnType("text");
