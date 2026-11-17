@@ -12,7 +12,16 @@ Everything under `/api/v1/transactions`, `/api/v1/accounts`, and `/api/v1/plaid`
 Authorization: Bearer <token>
 ```
 
-Access tokens currently expire after 1 hour (planned: 15 minutes). Refresh tokens last 7 days. Use the refresh token to get a new pair without asking the user to log in again.
+Access tokens expire after **10 minutes** (`expiresIn` in the login/refresh response, in seconds) and can't be revoked. That's why they're short. Use the refresh token to get a new pair without asking the user to log in again.
+
+Refresh tokens are single-use. Every refresh spends the token you send and returns a new one. A token lasts 7 days, and a session (one login and every token rotated from it, called a *family*) lasts at most 30 days. After that the user signs in again. The server stores only a SHA-256 hash of each refresh token.
+
+**Two ways to hold the refresh token**, depending on the client:
+
+| Client | How | Why |
+|---|---|---|
+| Native (the MAUI app, CLIs) | Default. The refresh token is in the response body. Keep it in the OS keychain (iOS/macOS Keychain, Android Keystore). Send it in the body to `/auth/refresh` and `/auth/revoke` | RFC 8252: there's no page script to steal it from, and the keychain protects it at rest |
+| Browser | `POST /auth/login?useCookies=true`. The refresh token is set as a cookie `pf_refresh` (`HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth`) and `refreshToken` is `null` in the body. Call `/auth/refresh` and `/auth/revoke` with **no body**, and the cookie is used and rotated | JavaScript can't read an HttpOnly cookie, so an XSS bug can't steal the session. `SameSite=Strict` means another site can't make the browser spend it. Keep the access token in memory only, never in `localStorage` |
 
 ### `POST /api/v1/auth/register`
 
@@ -31,7 +40,9 @@ Not authenticated.
 
 ### `POST /api/v1/auth/login`
 
-Not authenticated.
+Not authenticated. Rate-limited (10 per minute per IP).
+
+**Query**: `useCookies=true` (optional, browser clients only, see above).
 
 **Request**
 ```json
@@ -41,35 +52,40 @@ Not authenticated.
 **Response**
 - `200 OK`
   ```json
-  { "token": "<jwt>", "refreshToken": "<opaque string>" }
+  { "token": "<jwt>", "refreshToken": "<opaque string>", "expiresIn": 600 }
   ```
+  With `useCookies=true`, `refreshToken` is `null` and the token is in the `Set-Cookie: pf_refresh=...` header instead.
 - `401 Unauthorized` — wrong email or password
 
 ### `POST /api/v1/auth/refresh`
 
-Not authenticated (the refresh token itself is the credential). Rotates the refresh token - the one you send is revoked, a new one is issued.
+Not authenticated (the refresh token itself is the credential). Rate-limited like login. Rotates the refresh token: the one you send is spent and a new one is issued, delivered the same way it arrived (body or cookie).
 
 **Request**
 ```json
 { "refreshToken": "<opaque string>" }
 ```
+Or no body at all, to use the `pf_refresh` cookie.
 
 **Response**
-- `200 OK` — same shape as login: `{ "token": "...", "refreshToken": "..." }`
-- `401 Unauthorized` — token not found, expired, **or already used** (presenting an already-revoked token is treated as theft: every refresh token issued to that user is invalidated, forcing a fresh login on every device. Access tokens already issued stay valid until they expire. Planned: revoke only the affected token family)
+- `200 OK` — same shape as login
+- `401 Unauthorized` — no token, token not found, expired, past the 30-day session limit, logged out, **or already used**. Presenting a token that was already rotated is treated as theft: every token in that session's family is revoked, so whoever holds the newest one is signed out too. The user's other sessions (other logins and devices) are unaffected. Access tokens already issued stay valid until they expire (at most 10 minutes). A cookie-based refresh that fails also clears the cookie.
+
+Clients must not refresh concurrently with the same token: the second request looks exactly like a replay and ends the session. The MAUI app funnels every refresh through one lock (`AuthTokenProvider.RefreshAsync`).
 
 ### `POST /api/v1/auth/revoke`
 
-Not authenticated. Effectively a logout - revokes a single refresh token.
+Not authenticated. Logout: ends this session (the token's whole family). Other devices stay signed in.
 
 **Request**
 ```json
 { "refreshToken": "<opaque string>" }
 ```
+Or no body, to use (and clear) the `pf_refresh` cookie.
 
 **Response**
 - `204 No Content`
-- `400 Bad Request` — token not found or already revoked
+- `400 Bad Request` — no token, token not found, or already revoked
 
 ## Plaid
 

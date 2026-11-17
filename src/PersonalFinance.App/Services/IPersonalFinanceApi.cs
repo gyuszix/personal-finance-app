@@ -62,6 +62,8 @@ public record RegisterRequest(string Email, string Password);
 public record RefreshTokenRequest(string RefreshToken);
 public record ExchangeTokenRequest(string PublicToken);
 
-public record TokenResponse(string Token, string RefreshToken);
+// The app is a native client, so it never asks for the cookie: the refresh
+// token comes in the body and is kept in SecureStorage (#115).
+public record TokenResponse(string Token, string RefreshToken, int ExpiresIn = 0);
 public record LinkTokenResponse(string LinkToken);
 public record IdentityErrorDto(string Code, string Description);

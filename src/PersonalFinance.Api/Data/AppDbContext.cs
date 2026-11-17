@@ -63,6 +63,12 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.UserId, s.Date });
         modelBuilder.Entity<BalanceSnapshot>().Property(s => s.UserId).IsRequired();
 
+        modelBuilder.Entity<RefreshToken>().HasIndex(r => r.TokenHash).IsUnique();
+        modelBuilder.Entity<RefreshToken>().HasIndex(r => r.FamilyId);
+        modelBuilder.Entity<RefreshToken>().Property(r => r.TokenHash).HasMaxLength(64).IsRequired();
+        modelBuilder.Entity<RefreshToken>().Property(r => r.RevokedReason).HasMaxLength(32);
+        modelBuilder.Entity<RefreshToken>().Ignore(r => r.IsRevoked);
+
         modelBuilder.Entity<Budget>().HasIndex(b => new { b.UserId, b.Category }).IsUnique();
         modelBuilder.Entity<Budget>().Property(b => b.UserId).IsRequired();
         modelBuilder.Entity<Budget>().Property(b => b.Category).IsRequired().HasMaxLength(64);

@@ -17,6 +17,7 @@ using Going.Plaid;
 using PersonalFinance.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using PersonalFinance.Api.Services;
+using PersonalFinance.Api.Services.Auth;
 using Asp.Versioning;
 
 namespace PersonalFinance.Api.Extensions;
@@ -47,10 +48,15 @@ public static class ServiceExtensions
 
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration config)
     {
+        services.Configure<JwtOptions>(config.GetSection("Jwt"));
+        services.AddScoped<TokenService>();
+
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
             {
+                // The default 5 minutes would stretch a 10-minute token to 15.
+                ClockSkew = TimeSpan.FromSeconds(30),
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,

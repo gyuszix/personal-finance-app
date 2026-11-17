@@ -147,6 +147,9 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- The app refreshes an access token that is about to expire before a
+  SignalR (re)connect, which can't use the refresh-on-401 path, so live
+  sync updates survive the shorter access tokens (#115)
 - Plaid sync is idempotent and safe to run concurrently. Each Item syncs
   in one DB transaction holding a row lock on its accounts, so a second
   sync of the same bank (schedule, manual, another instance) waits and
@@ -227,6 +230,18 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   a dev database)
 
 ### Security
+- Access tokens last 10 minutes (was 1 hour), with a 30-second clock
+  skew (was the default 5 minutes) and a `jti`. Refresh tokens are
+  stored only as SHA-256 hashes and grouped into a family per login: 7
+  days per token, 30 days per session however often it rotates. Reusing
+  a rotated token revokes that family only, not every session the user
+  has, and two concurrent refreshes with one token can no longer both
+  succeed. Logout ends just that session. Browser clients can pass
+  `?useCookies=true` to get the refresh token in an `HttpOnly; Secure;
+  SameSite=Strict` cookie scoped to `/api/v1/auth` instead of the body.
+  `/auth/refresh` is now rate-limited like login. **Every existing
+  session is signed out by the migration** (tokens were stored in
+  plaintext) (#115)
 - Offline transaction cache is cleared on logout and sign-in - it
   previously leaked one user's transactions to the next on the same
   device (#55)

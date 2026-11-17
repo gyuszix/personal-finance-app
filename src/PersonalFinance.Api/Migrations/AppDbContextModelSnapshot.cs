@@ -282,21 +282,37 @@ namespace PersonalFinance.Api.Migrations
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("IsRevoked")
-                        .HasColumnType("boolean");
+                    b.Property<Guid>("FamilyId")
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("ReplacedByToken")
-                        .HasColumnType("text");
+                    b.Property<DateTime>("FamilyStartedAt")
+                        .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("Token")
+                    b.Property<int?>("ReplacedByTokenId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RevokedReason")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("TokenHash")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("FamilyId");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
 
                     b.ToTable("RefreshTokens");
                 });

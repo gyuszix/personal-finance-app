@@ -1,14 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using PersonalFinance.Api.Data;
 using PersonalFinance.Api.DTOs;
 using PersonalFinance.Api.Entities;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
+using Microsoft.Extensions.Options;
+using PersonalFinance.Api.Services.Auth;
 using PersonalFinance.Api.Middleware;
 
 namespace PersonalFinance.Api.Endpoints;
@@ -35,139 +30,76 @@ public static class AuthEndpoints
         .AddEndpointFilter<ValidationFilter<RegisterRequest>>()
         .RequireRateLimiting("auth");
 
+        // ?useCookies=true is for browser clients: the refresh token is set
+        // as an HttpOnly cookie and left out of the body. Native clients
+        // omit it and get the token in the body for their keychain (#115).
         app.MapPost("/auth/login", async (
             LoginRequest request,
+            bool? useCookies,
             UserManager<User> userManager,
-            AppDbContext db,
-            IConfiguration config) =>
+            TokenService tokens,
+            IOptions<JwtOptions> jwt,
+            HttpContext http) =>
         {
             var user = await userManager.FindByEmailAsync(request.Email);
             if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
                 return Results.Unauthorized();
 
-            var jwt = GenerateJwt(user, await userManager.GetRolesAsync(user), config);
-            var refreshToken = GenerateRefreshToken(user.Id);
-
-            db.RefreshTokens.Add(refreshToken);
-            await db.SaveChangesAsync();
-
-            return Results.Ok(new
-            {
-                token = jwt,
-                refreshToken = refreshToken.Token
-            });
+            var issued = await tokens.IssueAsync(user);
+            return TokenResult(issued, useCookies == true, jwt.Value, http);
         })
         .RequireRateLimiting("auth");
 
-        // Issues a new JWT + refresh token, rotates the old refresh token
+        // Rotates the refresh token: the one presented is spent, a new one
+        // is issued. From the body if sent there, otherwise the cookie - and
+        // the new one goes back the same way it came.
         app.MapPost("/auth/refresh", async (
-            RefreshRequest request,
-            AppDbContext db,
-            UserManager<User> userManager,
-            IConfiguration config) =>
+            RefreshRequest? request,
+            TokenService tokens,
+            IOptions<JwtOptions> jwt,
+            HttpContext http) =>
         {
-            var existing = await db.RefreshTokens
-                .FirstOrDefaultAsync(r => r.Token == request.RefreshToken);
+            var fromCookie = string.IsNullOrEmpty(request?.RefreshToken);
+            var presented = fromCookie ? RefreshTokenCookie.Read(http.Request) : request!.RefreshToken;
+            if (presented is null) return Results.Unauthorized();
 
-            // Token not found
-            if (existing == null)
+            var result = await tokens.RefreshAsync(presented);
+            if (result.Status != RefreshStatus.Ok)
             {
+                if (fromCookie) RefreshTokenCookie.Clear(http.Response);
                 return Results.Unauthorized();
             }
 
-            // Reuse detection — token was already used, nuke the whole family
-            if (existing.IsRevoked)
-            {
-                var allUserTokens = db.RefreshTokens
-                    .Where(r => r.UserId == existing.UserId);
-                db.RefreshTokens.RemoveRange(allUserTokens);
-                await db.SaveChangesAsync();
-                return Results.Unauthorized();
-            }
+            return TokenResult(result.Tokens!, fromCookie, jwt.Value, http);
+        })
+        .RequireRateLimiting("auth");
 
-            // Token expired
-            if (existing.ExpiresAt < DateTime.UtcNow)
-            {
-                return Results.Unauthorized();
-            }
-
-            var user = await userManager.FindByIdAsync(existing.UserId);
-            if (user == null)
-            {
-                return Results.Unauthorized();
-            }
-
-            // Rotate — revoke old, issue new
-            existing.IsRevoked = true;
-            var newRefreshToken = GenerateRefreshToken(user.Id);
-            existing.ReplacedByToken = newRefreshToken.Token;
-
-            db.RefreshTokens.Add(newRefreshToken);
-            await db.SaveChangesAsync();
-
-            var jwt = GenerateJwt(user, await userManager.GetRolesAsync(user), config);
-
-            return Results.Ok(new
-            {
-                token = jwt,
-                refreshToken = newRefreshToken.Token
-            });
-        });
-
-        // Revokes a refresh token — effectively logs the user out
+        // Logout: ends this session (its whole token family). Other devices
+        // stay signed in.
         app.MapPost("/auth/revoke", async (
-            RefreshRequest request,
-            AppDbContext db) =>
+            RefreshRequest? request,
+            TokenService tokens,
+            HttpContext http) =>
         {
-            var existing = await db.RefreshTokens
-                .FirstOrDefaultAsync(r => r.Token == request.RefreshToken);
-
-            if (existing == null || existing.IsRevoked)
-            {
+            var fromCookie = string.IsNullOrEmpty(request?.RefreshToken);
+            var presented = fromCookie ? RefreshTokenCookie.Read(http.Request) : request!.RefreshToken;
+            if (fromCookie) RefreshTokenCookie.Clear(http.Response);
+            if (presented is null || await tokens.RevokeAsync(presented) is null)
                 return Results.BadRequest("Invalid token");
-            }
-
-            existing.IsRevoked = true;
-            await db.SaveChangesAsync();
 
             return Results.NoContent();
         });
     }
 
-    // Extracted so both /login and /refresh can use it
-    private static string GenerateJwt(User user, IList<string> roles, IConfiguration config)
+    private static IResult TokenResult(IssuedTokens issued, bool useCookie, JwtOptions jwt, HttpContext http)
     {
-        var claims = new List<Claim>
+        if (useCookie) RefreshTokenCookie.Set(http.Response, issued.RefreshToken, issued.RefreshTokenExpiresAt);
+
+        return Results.Ok(new
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email!)
-        };
-
-        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["Jwt:Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: config["Jwt:Issuer"],
-            audience: config["Jwt:Audience"],
-            claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
-            signingCredentials: creds
-        );
-
-        return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    private static RefreshToken GenerateRefreshToken(string userId)
-    {
-        return new RefreshToken
-        {
-            Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-            UserId = userId,
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(7),
-            IsRevoked = false
-        };
+            token = issued.AccessToken,
+            refreshToken = useCookie ? null : issued.RefreshToken,
+            expiresIn = jwt.AccessTokenMinutes * 60
+        });
     }
 }
