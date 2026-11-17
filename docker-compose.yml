@@ -18,5 +18,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # Logs, traces and metrics from the API (#121): open http://localhost:18888.
+  # Point the API at it with OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317.
+  # In-memory only - telemetry is gone when the container stops.
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.5
+    container_name: personalfinance-dashboard
+    environment:
+      # Local dev only: no login on the dashboard UI or the OTLP endpoint.
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "18888:18888"   # UI
+      - "4317:18889"    # OTLP/gRPC in
+
 volumes:
   personalfinance-postgres-data:

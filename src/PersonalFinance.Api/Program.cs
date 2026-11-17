@@ -7,10 +7,14 @@ using PersonalFinance.Api.Endpoints;
 using PersonalFinance.Api.Extensions;
 using PersonalFinance.Api.Hubs;
 using PersonalFinance.Api.Middleware;
+using PersonalFinance.Api.Observability;
 using PersonalFinance.Api.Services;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Observability ─────────────────────────────────────────────────────────────
+builder.AddObservability();
 
 // ── Docs ──────────────────────────────────────────────────────────────────────
 builder.Services.AddOpenApi();
@@ -137,6 +141,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+app.UseRequestLogging();
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 app.UseRateLimiter();

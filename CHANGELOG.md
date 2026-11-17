@@ -11,6 +11,15 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Observability: Serilog structured logging (one summary line per
+  request, compact JSON outside Development with trace and span ids) and
+  OpenTelemetry traces (ASP.NET Core, Plaid HTTP calls, Npgsql, custom
+  `plaid.sync_item` and `plaid.webhook` spans) and metrics (runtime,
+  HTTP, synced transactions, item syncs, webhooks by verification
+  result, audit events by type). Exported over OTLP when
+  `OTEL_EXPORTER_OTLP_ENDPOINT` is set. `docker compose up
+  aspire-dashboard` gives a local UI on :18888. Query strings, which can
+  carry SignalR access tokens, are kept out of logs and spans (#121)
 - Plaid webhooks: `POST /api/v1/plaid/webhook` verifies Plaid's signed
   `Plaid-Verification` JWT (ES256 only, a current non-expired Plaid key,
   `iat` within 5 minutes, body SHA-256 matching in constant time) and

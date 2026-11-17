@@ -9,6 +9,7 @@ using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Services;
 using PersonalFinance.Api.Services.Webhooks;
+using PersonalFinance.Api.Observability;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -137,7 +138,10 @@ public static class PlaidEndpoints
             var body = await ReadBodyAsync(http.Request, MaxWebhookBytes, cancellationToken);
             if (body is null) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
 
+            using var activity = Telemetry.Source.StartActivity("plaid.webhook");
             var result = await verifier.VerifyAsync(http.Request.Headers["Plaid-Verification"], body, cancellationToken);
+            activity?.SetTag("plaid.webhook.verification", result.ToString());
+            Telemetry.Webhooks.Add(1, new KeyValuePair<string, object?>("verification", result.ToString()));
             if (result != WebhookVerification.Valid)
             {
                 await audit.RecordAsync(AuditEventTypes.PlaidWebhookRejected, null, new { reason = result.ToString() });
@@ -155,6 +159,8 @@ public static class PlaidEndpoints
             }
             if (webhook is null) return Results.BadRequest();
 
+            activity?.SetTag("plaid.webhook.type", webhook.WebhookType);
+            activity?.SetTag("plaid.webhook.code", webhook.WebhookCode);
             logger.LogInformation("Plaid webhook {WebhookType}/{WebhookCode} for Item {ItemId}",
                 webhook.WebhookType, webhook.WebhookCode, webhook.ItemId);
 
