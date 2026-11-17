@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using PersonalFinance.Api.DTOs;
 using PersonalFinance.Api.Entities;
 using Microsoft.Extensions.Options;
+using PersonalFinance.Api.Services;
 using PersonalFinance.Api.Services.Auth;
 using PersonalFinance.Api.Middleware;
 
@@ -38,14 +39,27 @@ public static class AuthEndpoints
             bool? useCookies,
             UserManager<User> userManager,
             TokenService tokens,
+            AuditLog audit,
             IOptions<JwtOptions> jwt,
             HttpContext http) =>
         {
             var user = await userManager.FindByEmailAsync(request.Email);
-            if (user == null || !await userManager.CheckPasswordAsync(user, request.Password))
+            if (user == null)
+            {
+                // No user to attach it to, and the email isn't recorded: it's
+                // whatever the caller typed, possibly someone's password.
+                await audit.RecordAsync(AuditEventTypes.LoginFailed, null, new { reason = "unknown-email" });
                 return Results.Unauthorized();
+            }
+            if (!await userManager.CheckPasswordAsync(user, request.Password))
+            {
+                await audit.RecordAsync(AuditEventTypes.LoginFailed, user.Id, new { reason = "wrong-password" });
+                return Results.Unauthorized();
+            }
 
             var issued = await tokens.IssueAsync(user);
+            await audit.RecordAsync(AuditEventTypes.LoginSucceeded, user.Id,
+                new { sessionId = issued.FamilyId, cookie = useCookies == true });
             return TokenResult(issued, useCookies == true, jwt.Value, http);
         })
         .RequireRateLimiting("auth");
@@ -56,6 +70,7 @@ public static class AuthEndpoints
         app.MapPost("/auth/refresh", async (
             RefreshRequest? request,
             TokenService tokens,
+            AuditLog audit,
             IOptions<JwtOptions> jwt,
             HttpContext http) =>
         {
@@ -64,6 +79,9 @@ public static class AuthEndpoints
             if (presented is null) return Results.Unauthorized();
 
             var result = await tokens.RefreshAsync(presented);
+            if (result.Status == RefreshStatus.ReuseDetected)
+                await audit.RecordAsync(AuditEventTypes.RefreshTokenReuseDetected, result.UserId,
+                    new { sessionId = result.FamilyId, sessionRevoked = true });
             if (result.Status != RefreshStatus.Ok)
             {
                 if (fromCookie) RefreshTokenCookie.Clear(http.Response);
@@ -79,13 +97,16 @@ public static class AuthEndpoints
         app.MapPost("/auth/revoke", async (
             RefreshRequest? request,
             TokenService tokens,
+            AuditLog audit,
             HttpContext http) =>
         {
             var fromCookie = string.IsNullOrEmpty(request?.RefreshToken);
             var presented = fromCookie ? RefreshTokenCookie.Read(http.Request) : request!.RefreshToken;
             if (fromCookie) RefreshTokenCookie.Clear(http.Response);
-            if (presented is null || await tokens.RevokeAsync(presented) is null)
-                return Results.BadRequest("Invalid token");
+            var revoked = presented is null ? null : await tokens.RevokeAsync(presented);
+            if (revoked is null) return Results.BadRequest("Invalid token");
+
+            await audit.RecordAsync(AuditEventTypes.Logout, revoked.Value.UserId, new { sessionId = revoked.Value.FamilyId });
 
             return Results.NoContent();
         });

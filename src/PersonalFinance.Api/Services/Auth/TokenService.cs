@@ -11,7 +11,7 @@ using PersonalFinance.Api.Entities;
 
 namespace PersonalFinance.Api.Services.Auth;
 
-public record IssuedTokens(string AccessToken, string RefreshToken, DateTime RefreshTokenExpiresAt);
+public record IssuedTokens(string AccessToken, string RefreshToken, DateTime RefreshTokenExpiresAt, Guid FamilyId);
 
 public enum RefreshStatus { Ok, Invalid, Expired, ReuseDetected }
 
@@ -37,7 +37,7 @@ public class TokenService(
         var (raw, token) = NewRefreshToken(user.Id, Guid.NewGuid(), familyStartedAt: now);
         db.RefreshTokens.Add(token);
         await db.SaveChangesAsync();
-        return new IssuedTokens(await AccessTokenAsync(user), raw, token.ExpiresAt);
+        return new IssuedTokens(await AccessTokenAsync(user), raw, token.ExpiresAt, token.FamilyId);
     }
 
     public async Task<RefreshResult> RefreshAsync(string rawRefreshToken)
@@ -91,19 +91,19 @@ public class TokenService(
             .ExecuteUpdateAsync(r => r.SetProperty(x => x.ReplacedByTokenId, next.Id));
         await tx.CommitAsync();
 
-        return new RefreshResult(RefreshStatus.Ok, new IssuedTokens(await AccessTokenAsync(user), raw, next.ExpiresAt),
+        return new RefreshResult(RefreshStatus.Ok, new IssuedTokens(await AccessTokenAsync(user), raw, next.ExpiresAt, next.FamilyId),
             user.Id, existing.FamilyId);
     }
 
     // Logout: ends this session (the whole family), leaves other devices alone.
-    // Returns the owner, or null if the token wasn't a live one.
-    public async Task<string?> RevokeAsync(string rawRefreshToken)
+    // Returns the session's owner and id, or null if the token wasn't live.
+    public async Task<(string UserId, Guid FamilyId)?> RevokeAsync(string rawRefreshToken)
     {
         var existing = await FindAsync(rawRefreshToken);
         if (existing is null || existing.IsRevoked) return null;
 
         await RevokeFamilyAsync(existing.FamilyId, RefreshTokenRevocation.Logout);
-        return existing.UserId;
+        return (existing.UserId, existing.FamilyId);
     }
 
     public static string Hash(string rawToken) =>

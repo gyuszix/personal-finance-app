@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Audit log of security events: logins (succeeded/failed), refresh-token
+  reuse detection, logout, and Plaid bank link/unlink, each with time,
+  IP, user agent and small JSON details (never secrets). `GET
+  /api/v1/audit` shows the signed-in user their own events.
+  `AuditEvents` is append-only, with triggers that reject
+  `UPDATE`/`DELETE`/`TRUNCATE`, and every event is also a structured log
+  entry (#116)
 - Budgets: a monthly limit per spending category, suggested from your
   last three months until you set your own on the new Budgets page, and
   a Budgets card showing spent vs limit with over-budget categories

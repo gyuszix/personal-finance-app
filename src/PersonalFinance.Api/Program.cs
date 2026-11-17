@@ -100,6 +100,7 @@ apiV1.MapTransactionEndpoints();
 apiV1.MapAccountEndpoints();
 apiV1.MapInsightEndpoints();
 apiV1.MapBudgetEndpoints();
+apiV1.MapAuditEndpoints();
 
 app.MapHub<TransactionsHub>("/hubs/transactions");
 

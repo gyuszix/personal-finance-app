@@ -46,6 +46,7 @@ public static class PlaidEndpoints
             UserManager<User> userManager,
             PlaidTokenProtector protector,
             PlaidInstitutionService institutions,
+            AuditLog audit,
             HttpContext http) =>
         {
             var userId = userManager.GetUserId(http.User);
@@ -103,6 +104,13 @@ public static class PlaidEndpoints
             }
 
             await db.SaveChangesAsync();
+
+            await audit.RecordAsync(AuditEventTypes.PlaidItemLinked, userId, new
+            {
+                itemId = accountsResponse.Item.ItemId,
+                institutionId,
+                accountCount = accountsResponse.Accounts.Count
+            });
 
             return Results.Ok("Bank account linked successfully");
         }).RequireAuthorization();
