@@ -167,6 +167,20 @@ Called after the user completes Plaid Link with a `public_token`. Exchanges it f
 **Response**
 - `200 OK` — `"Bank account linked successfully"`
 
+### `POST /api/v1/plaid/webhook`
+
+**Called by Plaid, not by clients.** Not authenticated with a JWT. Every request must instead carry Plaid's signed `Plaid-Verification` header, and anything that fails verification gets `401` and an audit event `plaid.webhook.rejected` (with the reason, no user):
+
+1. The header is a JWT with `alg` exactly `ES256`. `none`, `HS256` and anything else are rejected before any key is looked at.
+2. Its `kid` is a current Plaid key from `/webhook_verification_key/get`, cached for 24 h. A key Plaid has marked `expired_at` is refused.
+3. The signature verifies with that key.
+4. `iat` is no more than 5 minutes old, so a captured webhook can't be replayed later.
+5. `request_body_sha256` equals the SHA-256 of the exact body received (constant-time compare), so the signature covers the payload.
+
+Bodies over 64 KB get `413`. A verified `TRANSACTIONS` / `SYNC_UPDATES_AVAILABLE` queues a background sync of that Item (deduplicated while it waits) and returns `200` straight away. Other verified webhooks are logged and acknowledged with `200`, so Plaid doesn't retry them.
+
+Plaid only sends webhooks if the link token named a URL: set `Plaid:WebhookUrl` to the public HTTPS address of this endpoint. It's unset in local development, where Plaid can't reach `localhost`, and the scheduled and manual syncs cover that case.
+
 ## Transactions
 
 All endpoints below require `Authorization: Bearer <token>` and are scoped to the authenticated user's own data only.

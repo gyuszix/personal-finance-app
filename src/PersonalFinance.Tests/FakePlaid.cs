@@ -67,8 +67,17 @@ public sealed class FakePlaid
                 request_id = "req"
             });
 
-        return Json(HttpStatusCode.OK, await respond(body));
+        var result = await respond(body);
+        return result is Error error
+            ? Json(HttpStatusCode.BadRequest, new
+            {
+                error_type = "INVALID_INPUT", error_code = error.Code, error_message = error.Message, request_id = "req"
+            })
+            : Json(HttpStatusCode.OK, result);
     }
+
+    // Return from a route to answer like a Plaid API error.
+    public sealed record Error(string Code, string Message = "faked Plaid error");
 
     private static HttpResponseMessage Json(HttpStatusCode status, object payload) => new(status)
     {

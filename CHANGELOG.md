@@ -11,6 +11,12 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Plaid webhooks: `POST /api/v1/plaid/webhook` verifies Plaid's signed
+  `Plaid-Verification` JWT (ES256 only, a current non-expired Plaid key,
+  `iat` within 5 minutes, body SHA-256 matching in constant time) and
+  rejects anything else with `401` and a `plaid.webhook.rejected` audit
+  event. `SYNC_UPDATES_AVAILABLE` queues a background sync of just that
+  Item. Link tokens carry `Plaid:WebhookUrl` when it's configured (#118)
 - Two-factor authentication (TOTP, RFC 6238) with any authenticator app.
   Set it up on the new **Security** page (from Accounts): copy the key
   or setup link, confirm with a code, and save the 10 one-time recovery

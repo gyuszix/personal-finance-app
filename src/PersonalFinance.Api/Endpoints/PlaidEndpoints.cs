@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using PersonalFinance.Api.Entities;
 using PersonalFinance.Api.Data;
 using PersonalFinance.Api.Services;
+using PersonalFinance.Api.Services.Webhooks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PersonalFinance.Api.Endpoints;
 
@@ -19,6 +22,7 @@ public static class PlaidEndpoints
         app.MapGet("/plaid/link-token", async (
             PlaidClient plaid,
             UserManager<User> userManager,
+            IConfiguration config,
             HttpContext http) =>
         {
             // Get the logged-in user's ID from the JWT claims
@@ -31,7 +35,11 @@ public static class PlaidEndpoints
                 ClientName = "Personal Finance App",
                 Products = [Products.Transactions],
                 CountryCodes = [CountryCode.Us],
-                Language = Language.English
+                Language = Language.English,
+                // Where Plaid sends webhooks for this Item (#118). Unset in
+                // local dev: Plaid can't reach localhost, and the scheduled
+                // and manual syncs still work without it.
+                Webhook = string.IsNullOrWhiteSpace(config["Plaid:WebhookUrl"]) ? null : config["Plaid:WebhookUrl"]
             };
 
             var response = await plaid.LinkTokenCreateAsync(request);
@@ -114,7 +122,76 @@ public static class PlaidEndpoints
 
             return Results.Ok("Bank account linked successfully");
         }).RequireAuthorization();
+
+        // Plaid -> us. Anonymous by nature, so every request must prove it
+        // came from Plaid via the signed Plaid-Verification header before
+        // anything in the body is trusted (#118).
+        app.MapPost("/plaid/webhook", async (
+            HttpContext http,
+            PlaidWebhookVerifier verifier,
+            PlaidItemSyncQueue syncQueue,
+            AuditLog audit,
+            ILogger<PlaidWebhookVerifier> logger,
+            CancellationToken cancellationToken) =>
+        {
+            var body = await ReadBodyAsync(http.Request, MaxWebhookBytes, cancellationToken);
+            if (body is null) return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+
+            var result = await verifier.VerifyAsync(http.Request.Headers["Plaid-Verification"], body, cancellationToken);
+            if (result != WebhookVerification.Valid)
+            {
+                await audit.RecordAsync(AuditEventTypes.PlaidWebhookRejected, null, new { reason = result.ToString() });
+                return Results.Unauthorized();
+            }
+
+            PlaidWebhook? webhook;
+            try
+            {
+                webhook = JsonSerializer.Deserialize<PlaidWebhook>(body);
+            }
+            catch (JsonException)
+            {
+                return Results.BadRequest();
+            }
+            if (webhook is null) return Results.BadRequest();
+
+            logger.LogInformation("Plaid webhook {WebhookType}/{WebhookCode} for Item {ItemId}",
+                webhook.WebhookType, webhook.WebhookCode, webhook.ItemId);
+
+            // The only one that needs action today: new or changed
+            // transactions are ready for /transactions/sync.
+            if (webhook is { WebhookType: "TRANSACTIONS", WebhookCode: "SYNC_UPDATES_AVAILABLE", ItemId: { } itemId })
+                syncQueue.Enqueue(itemId);
+
+            // 200 for everything verified, handled or not, so Plaid doesn't retry.
+            return Results.Ok();
+        })
+        .AllowAnonymous()
+        .ExcludeFromDescription();
     }
+
+    private const int MaxWebhookBytes = 64 * 1024;
+
+    // The raw bytes, because the signature covers exactly what Plaid sent;
+    // null if it's bigger than any real webhook.
+    private static async Task<byte[]?> ReadBodyAsync(HttpRequest request, int maxBytes, CancellationToken cancellationToken)
+    {
+        if (request.ContentLength > maxBytes) return null;
+        using var buffer = new MemoryStream();
+        var chunk = new byte[8192];
+        int read;
+        while ((read = await request.Body.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > maxBytes) return null;
+            buffer.Write(chunk, 0, read);
+        }
+        return buffer.ToArray();
+    }
+
+    private record PlaidWebhook(
+        [property: JsonPropertyName("webhook_type")] string? WebhookType,
+        [property: JsonPropertyName("webhook_code")] string? WebhookCode,
+        [property: JsonPropertyName("item_id")] string? ItemId);
 }
 
 public record ExchangeTokenRequest(string PublicToken);
