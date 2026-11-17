@@ -147,6 +147,15 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   linked to it
 
 ### Fixed
+- Plaid sync is idempotent and safe to run concurrently. Each Item syncs
+  in one DB transaction holding a row lock on its accounts, so a second
+  sync of the same bank (schedule, manual, another instance) waits and
+  continues from the first one's cursor instead of re-fetching the same
+  pages. The cursor is saved only together with the changes it produced.
+  A modification of a transaction we never stored is now stored instead
+  of dropped, and a pending transaction that posts within a single sync
+  no longer leaves its pending row behind. Accounts store their Plaid
+  Item ID (`PlaidItemId`), backfilled on the next sync (#114)
 - `Transactions` and `BalanceSnapshots` now have real foreign keys to
   `Accounts` (cascade on delete). There were none, so an orphaned row
   could stay in a user's totals. Existing orphans are removed by the

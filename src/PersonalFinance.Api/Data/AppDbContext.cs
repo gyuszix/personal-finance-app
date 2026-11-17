@@ -49,6 +49,7 @@ public class AppDbContext : IdentityDbContext<User>
         // list orders by date. Plans before/after in docs/DB_INDEXES.md (#113).
         modelBuilder.Entity<Transaction>().HasIndex(t => new { t.UserId, t.Date });
         modelBuilder.Entity<Account>().HasIndex(a => a.UserId);
+        modelBuilder.Entity<Account>().HasIndex(a => a.PlaidItemId);
 
         // Real foreign keys: a transaction or snapshot can't outlive its
         // account. The FK also gives Transactions an AccountId index, which
