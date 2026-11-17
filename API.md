@@ -111,6 +111,34 @@ TOTP (RFC 6238: 6 digits, 30-second steps), compatible with any authenticator ap
 
 Each recovery code works once. An accepted TOTP code is remembered (hashed) and refused again for 3 minutes, so a code seen over someone's shoulder can't be replayed within its validity window.
 
+## Categorisation rules
+
+Requires auth. A rule re-categorises the signed-in user's transactions, past and future. Every endpoint that reads a category (lists, summaries, cash flow, budgets, insights) sees the effective category. A transaction's original Plaid category is kept, so deleting a rule restores it.
+
+### `GET /api/v1/rules`
+
+The user's rules in the order they're tried (lowest `priority` first, then oldest). The first matching rule wins.
+```json
+[{ "id": 3, "pattern": "PURE GYM", "matchType": "contains", "category": "PERSONAL_CARE",
+   "accountId": null, "minAmount": null, "maxAmount": null, "priority": 100, "matchedTransactions": 14 }]
+```
+
+### `POST /api/v1/rules` · `PUT /api/v1/rules/{id}` · `DELETE /api/v1/rules/{id}`
+
+**Request** (POST/PUT)
+```json
+{ "pattern": "pure gym", "matchType": "contains", "category": "PERSONAL_CARE",
+  "accountId": null, "minAmount": null, "maxAmount": 60, "priority": 100 }
+```
+- `pattern`: 2-128 characters, matched against the description **ignoring case**. `matchType` is `contains`, or `equals` for the whole description.
+- `category`: one of Plaid's primary categories (`PlaidCategories.Primary`, including `INCOME` and the transfers).
+- `accountId`, `minAmount`, `maxAmount` (optional): narrow the rule to one of the user's own accounts and/or an amount range. Amounts are as Plaid reports them (positive = money out), inclusive.
+- `priority`: 0-1000, default 100. At most 200 rules per user.
+
+**Response**: `201 Created` / `200 OK` with the rule and its `matchedTransactions` after re-applying. `204` on delete. `400` validation problem. `404` for a rule that isn't yours. Saving or deleting a rule invalidates the user's cached summaries and insights.
+
+`GET /api/v1/transactions` items carry `categoryRuleId` and `plaidCategoryPrimary` (Plaid's original category) when a rule re-categorised them.
+
 ## Audit
 
 ### `GET /api/v1/audit`

@@ -111,6 +111,7 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
     // by Plaid ID - across all pages. A pending transaction added on one page
     // and removed on a later one (it posted) exists only here until the save.
     var known = new Dictionary<string, Transaction>();
+    var touched = new List<Transaction>();
     async Task LoadKnownAsync(IEnumerable<string?> plaidIds)
     {
       var missing = plaidIds.OfType<string>().Where(id => !known.ContainsKey(id)).Distinct().ToList();
@@ -177,8 +178,10 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
           : transaction.Date == default ? DateTime.UtcNow : transaction.Date;
         transaction.IsPending = pt.Pending ?? false;
         transaction.PendingTransactionId = pt.PendingTransactionId;
-        transaction.CategoryPrimary = pt.PersonalFinanceCategory?.Primary;
+        transaction.PlaidCategoryPrimary = pt.PersonalFinanceCategory?.Primary;
+        transaction.CategoryPrimary = transaction.PlaidCategoryPrimary; // rules re-applied below
         transaction.CategoryDetailed = pt.PersonalFinanceCategory?.Detailed;
+        touched.Add(transaction);
       }
 
       foreach (var rt in response.Removed)
@@ -191,6 +194,12 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
       cursor = response.NextCursor;
       hasMore = response.HasMore;
     } while (hasMore);
+
+    // The user's categorisation rules decide the effective category of
+    // everything this sync added or changed (#124).
+    var userId = itemAccounts[0].UserId;
+    var rules = CategoryRules.Ordered(await db.CategoryRules.IgnoreQueryFilters().Where(r => r.UserId == userId).ToListAsync());
+    CategoryRules.Apply(rules, touched.Where(t => db.Entry(t).State != EntityState.Deleted && db.Entry(t).State != EntityState.Detached));
 
     // Refresh the cached balances - Account.Balance is otherwise only ever
     // set once, at link time, and would go stale forever without this.

@@ -79,6 +79,32 @@ public class ApiService(
         }
     }
 
+    // ── Categorisation rules (#124) ──────────────────────────────────────────
+    public async Task<List<CategoryRuleResponse>?> GetRulesAsync() => (await api.GetRulesAsync()).Content;
+
+    // The created rule, or the server's validation message.
+    public async Task<(CategoryRuleResponse? Rule, string? Error)> CreateRuleAsync(CategoryRuleRequest request)
+    {
+        var response = await api.CreateRuleAsync(request);
+        if (response.IsSuccessStatusCode) return (response.Content, null);
+        var detail = response.Error is Refit.ApiException e ? e.Content : null;
+        return (null, string.IsNullOrEmpty(detail) ? "Couldn't save the rule." : ValidationMessage(detail));
+    }
+
+    public async Task<bool> DeleteRuleAsync(int id) => (await api.DeleteRuleAsync(id)).IsSuccessStatusCode;
+
+    private static string ValidationMessage(string problemJson)
+    {
+        try
+        {
+            using var json = System.Text.Json.JsonDocument.Parse(problemJson);
+            if (json.RootElement.TryGetProperty("errors", out var errors))
+                return string.Join(" ", errors.EnumerateObject().SelectMany(p => p.Value.EnumerateArray().Select(m => m.GetString())));
+        }
+        catch (System.Text.Json.JsonException) { }
+        return "Couldn't save the rule.";
+    }
+
     // ── Security (#117) ──────────────────────────────────────────────────────
     public async Task<MfaStatusResponse?> GetMfaStatusAsync() => (await api.GetMfaStatusAsync()).Content;
 

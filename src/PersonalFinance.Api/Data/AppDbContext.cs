@@ -24,6 +24,7 @@ public class AppDbContext : IdentityDbContext<User>
     public DbSet<BalanceSnapshot> BalanceSnapshots {get; set;}
     public DbSet<Budget> Budgets {get; set;}
     public DbSet<AuditEvent> AuditEvents {get; set;}
+    public DbSet<CategoryRule> CategoryRules {get; set;}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,8 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<BalanceSnapshot>().HasQueryFilter(s => s.UserId == _currentUserId);
 
         modelBuilder.Entity<Budget>().HasQueryFilter(b => b.UserId == _currentUserId);
+
+        modelBuilder.Entity<CategoryRule>().HasQueryFilter(r => r.UserId == _currentUserId);
 
         modelBuilder.Entity<Account>().HasIndex(a => a.PlaidAccountId).IsUnique();
 
@@ -71,6 +74,20 @@ public class AppDbContext : IdentityDbContext<User>
         modelBuilder.Entity<RefreshToken>().Ignore(r => r.IsRevoked);
 
         modelBuilder.Entity<Budget>().HasIndex(b => new { b.UserId, b.Category }).IsUnique();
+
+        // Categorisation rules (#124): an account-scoped rule goes with its
+        // account; a transaction whose rule is deleted is re-applied anyway.
+        modelBuilder.Entity<CategoryRule>().HasIndex(r => new { r.UserId, r.Priority });
+        modelBuilder.Entity<CategoryRule>().Property(r => r.UserId).IsRequired();
+        modelBuilder.Entity<CategoryRule>().Property(r => r.Pattern).IsRequired().HasMaxLength(128);
+        modelBuilder.Entity<CategoryRule>().Property(r => r.MatchType).IsRequired().HasMaxLength(16);
+        modelBuilder.Entity<CategoryRule>().Property(r => r.Category).IsRequired().HasMaxLength(64);
+        modelBuilder.Entity<CategoryRule>().Property(r => r.MinAmount).HasPrecision(MoneyPrecision, MoneyScale);
+        modelBuilder.Entity<CategoryRule>().Property(r => r.MaxAmount).HasPrecision(MoneyPrecision, MoneyScale);
+        modelBuilder.Entity<CategoryRule>()
+            .HasOne<Account>().WithMany().HasForeignKey(r => r.AccountId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<Transaction>()
+            .HasOne<CategoryRule>().WithMany().HasForeignKey(t => t.CategoryRuleId).OnDelete(DeleteBehavior.SetNull);
 
         // Read per user, newest first (#116). No query filter: the audit
         // endpoint filters explicitly, and security events without a user

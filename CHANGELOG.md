@@ -11,6 +11,16 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Categorisation rules: "description contains/is exactly X → category
+  Y", optionally only for one account or an amount range, with
+  priorities (first match wins). Rules apply to every matching
+  transaction, past ones straight away and new ones on each sync, so
+  lists, summaries, budgets and insights all use the new category.
+  Plaid's original is kept (`PlaidCategoryPrimary`), so deleting a rule
+  restores it, and a Plaid update to the category doesn't override the
+  rule. `GET/POST/PUT/DELETE /api/v1/rules`, and a Rules page in the app
+  (Transactions → Rules). The `CategoryRules` table has the per-user
+  filter and row-level security (#124)
 - Deploy-ready, nothing hosted: `docker-compose.prod.yml` puts Caddy
   (automatic HTTPS, Let's Encrypt with a real domain) in front of the
   API in Production, with nothing else published. `infra/main.bicep`

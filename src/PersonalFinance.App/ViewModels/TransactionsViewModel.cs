@@ -90,6 +90,10 @@ public partial class TransactionsViewModel : ObservableObject
         _ = LoadFirstPageAsync();
     }
 
+    // Categorisation rules (#124).
+    [RelayCommand]
+    private Task OpenRulesAsync() => Shell.Current.GoToAsync("rules");
+
     [RelayCommand]
     public async Task LoadTransactionsAsync()
     {

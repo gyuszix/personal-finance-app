@@ -46,7 +46,9 @@ public static class TransactionEndpoints
                     Amount = t.Amount,
                     Description = t.Description,
                     Date = t.Date,
-                    CategoryPrimary = t.CategoryPrimary
+                    CategoryPrimary = t.CategoryPrimary,
+                    PlaidCategoryPrimary = t.CategoryRuleId != null ? t.PlaidCategoryPrimary : null,
+                    CategoryRuleId = t.CategoryRuleId
                 })
                 .ToListAsync();
 

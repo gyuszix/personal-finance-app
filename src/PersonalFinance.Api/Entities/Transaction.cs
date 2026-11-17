@@ -12,6 +12,12 @@ public class Transaction
 
     public bool IsPending {get; set;}
     public string? PendingTransactionId {get; set;}
+    // The effective category - Plaid's, unless one of the user's rules
+    // matched (#124). What insights, budgets and filters read.
     public string? CategoryPrimary {get; set;}
+    // What Plaid said, kept so removing a rule restores it.
+    public string? PlaidCategoryPrimary {get; set;}
+    // The rule that set CategoryPrimary, if any.
+    public int? CategoryRuleId {get; set;}
     public string? CategoryDetailed {get; set;}
 }
