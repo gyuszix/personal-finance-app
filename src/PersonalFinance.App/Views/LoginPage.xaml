@@ -18,6 +18,15 @@
                Text="{Binding Password}"
                IsPassword="True" />
 
+        <VerticalStackLayout Spacing="8" IsVisible="{Binding IsTwoFactorRequired}">
+            <Entry Placeholder="{Binding CodePlaceholder}"
+                   Text="{Binding TwoFactorCode}"
+                   Keyboard="Numeric"
+                   SemanticProperties.Description="Two-factor authentication code" />
+            <Button Text="{Binding SwitchCodeText}" Style="{StaticResource GhostButton}"
+                    Command="{Binding SwitchCodeCommand}" />
+        </VerticalStackLayout>
+
         <Label Text="{Binding ErrorMessage}"
                Style="{StaticResource ErrorText}" />
 

@@ -36,10 +36,24 @@ public class ApiService(
         await cacheService.ClearAsync();
     }
 
-    public async Task<string?> LoginAsync(string email, string password)
+    public async Task<LoginOutcome> LoginAsync(
+        string email, string password, string? twoFactorCode = null, string? recoveryCode = null)
     {
-        var response = await api.LoginAsync(new LoginRequest(email, password));
-        if (!response.IsSuccessStatusCode || response.Content == null) return null;
+        var response = await api.LoginAsync(new LoginRequest(email, password, twoFactorCode, recoveryCode));
+        if (!response.IsSuccessStatusCode || response.Content == null)
+        {
+            // The server says *why* via a problem "code" when the password
+            // was right but a second factor is missing or wrong (#117).
+            var problem = response.Error is Refit.ApiException error
+                ? await ProblemCodeAsync(error)
+                : null;
+            return problem switch
+            {
+                MfaProblemCodes.RequiresTwoFactor => LoginOutcome.RequiresTwoFactor,
+                MfaProblemCodes.InvalidTwoFactorCode => LoginOutcome.InvalidTwoFactorCode,
+                _ => LoginOutcome.Failed
+            };
+        }
 
         // A fresh sign-in may be a different user than whoever filled the
         // offline cache (e.g. after their session expired without a logout).
@@ -48,8 +62,40 @@ public class ApiService(
 
         // Not awaited - sign-in shouldn't wait on (or fail because of) the hub.
         _ = syncHub.StartAsync();
-        return response.Content.Token;
+        return LoginOutcome.Success;
     }
+
+    private static async Task<string?> ProblemCodeAsync(Refit.ApiException error)
+    {
+        try
+        {
+            if (error.Content is null) return null;
+            using var json = System.Text.Json.JsonDocument.Parse(error.Content);
+            return json.RootElement.TryGetProperty("code", out var code) ? code.GetString() : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    // ── Security (#117) ──────────────────────────────────────────────────────
+    public async Task<MfaStatusResponse?> GetMfaStatusAsync() => (await api.GetMfaStatusAsync()).Content;
+
+    public async Task<MfaSetupResponse?> SetupMfaAsync() => (await api.SetupMfaAsync()).Content;
+
+    // Null when the code was wrong.
+    public async Task<List<string>?> EnableMfaAsync(string code) =>
+        (await api.EnableMfaAsync(new MfaCodeRequest { Code = code })).Content?.RecoveryCodes;
+
+    public async Task<bool> DisableMfaAsync(string code) =>
+        (await api.DisableMfaAsync(new MfaCodeRequest { Code = code })).IsSuccessStatusCode;
+
+    public async Task<List<string>?> RegenerateRecoveryCodesAsync(string code) =>
+        (await api.RegenerateRecoveryCodesAsync(new MfaCodeRequest { Code = code })).Content?.RecoveryCodes;
+
+    public async Task<List<AuditEventResponse>?> GetRecentActivityAsync(int count = 20) =>
+        (await api.GetAuditEventsAsync(1, count)).Content?.Items;
 
     public async Task<(bool Success, string? Error)> RegisterAsync(string email, string password)
     {
@@ -142,3 +188,5 @@ public class ApiService(
         return response.IsSuccessStatusCode;
     }
 }
+
+public enum LoginOutcome { Success, Failed, RequiresTwoFactor, InvalidTwoFactorCode }

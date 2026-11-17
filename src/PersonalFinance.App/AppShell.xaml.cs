@@ -8,5 +8,6 @@ public partial class AppShell : Shell
 
 		// Pushed from the budget variance card, not a tab
 		Routing.RegisterRoute("budgets", typeof(Views.BudgetsPage));
+		Routing.RegisterRoute("security", typeof(Views.SecurityPage));
 	}
 }

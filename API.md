@@ -46,16 +46,19 @@ Not authenticated. Rate-limited (10 per minute per IP).
 
 **Request**
 ```json
-{ "email": "user@example.com", "password": "..." }
+{ "email": "user@example.com", "password": "...", "twoFactorCode": "123456" }
 ```
+`twoFactorCode` (6 digits) or `twoFactorRecoveryCode` (`XXXXX-XXXXX`) is only needed for accounts with two-factor authentication on. Send the login without one first; a `401` with code `RequiresTwoFactor` means "ask for it and send the same login again with it".
 
 **Response**
 - `200 OK`
   ```json
   { "token": "<jwt>", "refreshToken": "<opaque string>", "expiresIn": 600 }
   ```
+- `401` problem with `"code": "RequiresTwoFactor"`: the password was right, a second factor is needed
+- `401` problem with `"code": "InvalidTwoFactorCode"`: wrong, expired or **already used** code (each TOTP code works once)
   With `useCookies=true`, `refreshToken` is `null` and the token is in the `Set-Cookie: pf_refresh=...` header instead.
-- `401 Unauthorized` — wrong email or password
+- `401 Unauthorized` — wrong email or password, or the account is locked out. Five wrong passwords or codes lock it for 15 minutes, and the response doesn't say which
 
 ### `POST /api/v1/auth/refresh`
 
@@ -87,6 +90,20 @@ Or no body, to use (and clear) the `pf_refresh` cookie.
 - `204 No Content`
 - `400 Bad Request` — no token, token not found, or already revoked
 
+## Two-factor authentication
+
+TOTP (RFC 6238: 6 digits, 30-second steps), compatible with any authenticator app. All endpoints require auth and share login's rate limit. Wrong codes count toward the same lockout as wrong passwords.
+
+| Endpoint | Body | Does |
+|---|---|---|
+| `GET /api/v1/auth/mfa` | — | `{ "enabled": true, "recoveryCodesLeft": 9 }` |
+| `POST /api/v1/auth/mfa/setup` | — | New secret: `{ "sharedKey": "abcd efgh …", "authenticatorUri": "otpauth://totp/PersonalFinance:you@example.com?secret=…&issuer=PersonalFinance&digits=6&period=30" }`. Login doesn't change until `/enable`. `409` if already on |
+| `POST /api/v1/auth/mfa/enable` | `{ "code": "123456" }` | Proves the app has the key and turns MFA on. Returns `{ "recoveryCodes": [10 × "XXXXX-XXXXX"] }`, **shown once**. `400` with `InvalidTwoFactorCode` if the code is wrong |
+| `POST /api/v1/auth/mfa/disable` | `{ "code": "123456" }` or a recovery code | Turns MFA off and discards the secret and recovery codes. Needs a code, so a stolen access token alone can't strip the second factor |
+| `POST /api/v1/auth/mfa/recovery-codes` | `{ "code": "123456" }` | Replaces the recovery codes, returning 10 new ones |
+
+Each recovery code works once. An accepted TOTP code is remembered (hashed) and refused again for 3 minutes, so a code seen over someone's shoulder can't be replayed within its validity window.
+
 ## Audit
 
 ### `GET /api/v1/audit`
@@ -113,9 +130,13 @@ Requires auth. The signed-in user's own security events, newest first. Paged lik
 | `eventType` | When | `details` |
 |---|---|---|
 | `auth.login.succeeded` | Password accepted | `sessionId` (the refresh-token family), `cookie` |
-| `auth.login.failed` | Wrong password (recorded against the user). An unknown email is recorded with no user and is never shown here | `reason`: `wrong-password` / `unknown-email` |
+| `auth.login.failed` | Wrong password, or a locked-out account (recorded against the user). An unknown email is recorded with no user and is never shown here | `reason`: `wrong-password` / `locked-out` / `unknown-email` |
 | `auth.refresh.reuse_detected` | A rotated refresh token was presented again: likely theft, and the session was ended | `sessionId`, `sessionRevoked` |
 | `auth.logout` | `/auth/revoke` | `sessionId` |
+| `auth.mfa.enabled` / `auth.mfa.disabled` | Two-factor turned on / off | — |
+| `auth.mfa.failed` | Wrong code at login or when changing MFA settings | `reason`, `during` |
+| `auth.mfa.recovery_code_used` | Signed in with a recovery code | `recoveryCodesLeft` |
+| `auth.mfa.recovery_codes_regenerated` | New recovery codes | — |
 | `plaid.item.linked` | A bank connected | `itemId`, `institutionId`, `accountCount` |
 | `plaid.item.unlinked` | A bank disconnected | `itemId`, `accountIds`, `plaidNotified` (false if Plaid couldn't be told because the token no longer decrypted) |
 

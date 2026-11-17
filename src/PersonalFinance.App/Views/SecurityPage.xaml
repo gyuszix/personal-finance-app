@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PersonalFinance.App.ViewModels"
+             x:Class="PersonalFinance.App.Views.SecurityPage"
+             x:DataType="vm:SecurityViewModel"
+             Title="Security">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16,20,32" Spacing="16" MaximumWidthRequest="720">
+            <Label Text="Security" Style="{StaticResource Headline}" />
+
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" />
+            <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
+
+            <!-- Two-factor authentication -->
+            <Border Style="{StaticResource Card}" Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Two-factor authentication" Style="{StaticResource SubHeadline}" />
+                    <Label Text="{Binding StatusText}" TextColor="{StaticResource TextMuted}" />
+
+                    <Button Text="Set up an authenticator app"
+                            Command="{Binding StartSetupCommand}"
+                            IsVisible="{Binding IsOff}" />
+
+                    <VerticalStackLayout Spacing="10" IsVisible="{Binding IsSettingUp}">
+                        <Label Text="1. In your authenticator app (1Password, Google Authenticator, Authy…), add an account with this key:"
+                               Style="{StaticResource Caption}" />
+                        <Border Padding="12" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Label Text="{Binding SharedKey}" FontFamily="Courier" FontSize="18"
+                                   HorizontalOptions="Center" SemanticProperties.Description="Authenticator key" />
+                        </Border>
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Text="Copy key" Style="{StaticResource GhostButton}" Command="{Binding CopyKeyCommand}" />
+                            <Button Text="Copy setup link" Style="{StaticResource GhostButton}" Command="{Binding CopyUriCommand}" />
+                        </HorizontalStackLayout>
+                        <Label Text="2. Enter the 6-digit code it shows:" Style="{StaticResource Caption}" />
+                        <Border Padding="10,0" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Entry Text="{Binding Code}" Keyboard="Numeric" Placeholder="123456"
+                                   SemanticProperties.Description="Authenticator code" />
+                        </Border>
+                        <Button Text="Turn on" Command="{Binding ConfirmSetupCommand}" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="10" IsVisible="{Binding IsEnabled}">
+                        <Label Text="A current authenticator code (or a recovery code, to turn it off):" Style="{StaticResource Caption}" />
+                        <Border Padding="10,0" StrokeShape="RoundRectangle 10" BackgroundColor="{StaticResource SurfaceRaised}">
+                            <Entry Text="{Binding Code}" Placeholder="123456"
+                                   SemanticProperties.Description="Authenticator or recovery code" />
+                        </Border>
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Text="New recovery codes" Style="{StaticResource GhostButton}"
+                                    Command="{Binding RegenerateRecoveryCodesCommand}" />
+                            <Button Text="Turn off" Style="{StaticResource GhostButton}"
+                                    Command="{Binding DisableCommand}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Recovery codes, shown once -->
+            <Border Style="{StaticResource Card}" Padding="16" IsVisible="{Binding HasNewRecoveryCodes}"
+                    BackgroundColor="{StaticResource WarningSurface}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Save your recovery codes" Style="{StaticResource SubHeadline}" />
+                    <Label Text="Each one signs you in once if you lose your authenticator. They won't be shown again."
+                           Style="{StaticResource Caption}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding RecoveryCodes}" Spacing="4">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Label Text="{Binding .}" FontFamily="Courier" FontSize="16" />
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                    <HorizontalStackLayout Spacing="8">
+                        <Button Text="Copy all" Command="{Binding CopyRecoveryCodesCommand}" />
+                        <Button Text="I've saved them" Style="{StaticResource GhostButton}"
+                                Command="{Binding DismissRecoveryCodesCommand}" />
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Recent activity from the audit log -->
+            <Label Text="Recent activity" Style="{StaticResource SubHeadline}" />
+            <VerticalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding Activity}">
+                <BindableLayout.EmptyView>
+                    <Label Text="Nothing yet." Style="{StaticResource Caption}" />
+                </BindableLayout.EmptyView>
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ActivityItem">
+                        <Border Style="{StaticResource Card}" Padding="12">
+                            <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="8">
+                                <Label Text="{Binding Title}">
+                                    <Label.Triggers>
+                                        <DataTrigger TargetType="Label" Binding="{Binding IsWarning}" Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource Warning}" />
+                                        </DataTrigger>
+                                    </Label.Triggers>
+                                </Label>
+                                <Label Grid.Column="1" Text="{Binding When}" Style="{StaticResource Caption}" />
+                                <Label Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Where}" Style="{StaticResource Caption}"
+                                       LineBreakMode="TailTruncation" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
