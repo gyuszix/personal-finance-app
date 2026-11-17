@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:card="clr-namespace:PersonalFinance.App.Insights.Cards.Recurring"
+             x:Class="PersonalFinance.App.Insights.Cards.Recurring.RecurringCardView"
+             x:DataType="card:RecurringCard"
+             ControlTemplate="{StaticResource InsightCardTemplate}">
+
+    <VerticalStackLayout Spacing="14">
+        <VerticalStackLayout Spacing="2">
+            <Label Text="{Binding TotalText}" Style="{StaticResource Figure}" />
+            <Label Text="{Binding CountText}" Style="{StaticResource Caption}" />
+        </VerticalStackLayout>
+
+        <BoxView HeightRequest="1" />
+
+        <VerticalStackLayout Spacing="10" BindableLayout.ItemsSource="{Binding Rows}">
+            <BindableLayout.ItemTemplate>
+                <DataTemplate x:DataType="card:RecurringRow">
+                    <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto" ColumnSpacing="8">
+                        <Label Text="{Binding Merchant}" LineBreakMode="TailTruncation" />
+                        <Label Grid.Column="1" Text="{Binding Amount}" FontFamily="OpenSansSemibold" HorizontalTextAlignment="End" />
+                        <Label Grid.Row="1" Text="{Binding Detail}" Style="{StaticResource Caption}" />
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding Next}" Style="{StaticResource Caption}" HorizontalTextAlignment="End" />
+                    </Grid>
+                </DataTemplate>
+            </BindableLayout.ItemTemplate>
+        </VerticalStackLayout>
+
+        <Label Text="{Binding MoreText}" Style="{StaticResource Caption}" IsVisible="{Binding HasMore}" />
+    </VerticalStackLayout>
+
+</ContentView>

@@ -139,6 +139,22 @@ The user's rules in the order they're tried (lowest `priority` first, then oldes
 
 `GET /api/v1/transactions` items carry `categoryRuleId` and `plaidCategoryPrimary` (Plaid's original category) when a rule re-categorised them.
 
+## Recurring charges
+
+### `GET /api/v1/insights/recurring?month=yyyy-MM`
+
+Same conventions as the other insights (sign-in, `month` validation, per-user caching invalidated on sync). Subscriptions and bills detected from the user's posted spending, as of today for the current month or the month's last day for a past one. The rules are in the README's metric table.
+```json
+{
+  "month": "2026-11", "asOf": "2026-11-16", "totalMonthlyCost": 54.97,
+  "series": [
+    { "merchant": "NETFLIX.COM", "category": "ENTERTAINMENT", "cadence": "monthly", "typicalAmount": 15.99,
+      "monthlyCost": 15.99, "occurrences": 8, "lastDate": "2026-11-01", "nextDate": "2026-12-01" }
+  ]
+}
+```
+`cadence` is `weekly`, `biweekly`, `monthly`, `quarterly` or `yearly`. `series` lists the soonest `nextDate` first.
+
 ## Audit
 
 ### `GET /api/v1/audit`
