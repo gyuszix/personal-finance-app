@@ -197,6 +197,8 @@ namespace PersonalFinance.Api.Migrations
                     b.HasIndex("PlaidAccountId")
                         .IsUnique();
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Accounts");
                 });
 
@@ -338,8 +340,12 @@ namespace PersonalFinance.Api.Migrations
 
                     b.HasKey("TransactionId");
 
+                    b.HasIndex("AccountId");
+
                     b.HasIndex("PlaidTransactionId")
                         .IsUnique();
+
+                    b.HasIndex("UserId", "Date");
 
                     b.ToTable("Transactions");
                 });
@@ -455,6 +461,24 @@ namespace PersonalFinance.Api.Migrations
                     b.HasOne("PersonalFinance.Api.Entities.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PersonalFinance.Api.Entities.BalanceSnapshot", b =>
+                {
+                    b.HasOne("PersonalFinance.Api.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PersonalFinance.Api.Entities.Transaction", b =>
+                {
+                    b.HasOne("PersonalFinance.Api.Entities.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

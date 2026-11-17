@@ -45,6 +45,19 @@ public class AppDbContext : IdentityDbContext<User>
         // per-account sync stored each transaction once per account (#53).
         modelBuilder.Entity<Transaction>().HasIndex(t => t.PlaidTransactionId).IsUnique();
 
+        // Every read filters by user, almost all by a date range too, and the
+        // list orders by date. Plans before/after in docs/DB_INDEXES.md (#113).
+        modelBuilder.Entity<Transaction>().HasIndex(t => new { t.UserId, t.Date });
+        modelBuilder.Entity<Account>().HasIndex(a => a.UserId);
+
+        // Real foreign keys: a transaction or snapshot can't outlive its
+        // account. The FK also gives Transactions an AccountId index, which
+        // unlinking needs; BalanceSnapshots' (AccountId, Date) already covers it.
+        modelBuilder.Entity<Transaction>()
+            .HasOne<Account>().WithMany().HasForeignKey(t => t.AccountId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<BalanceSnapshot>()
+            .HasOne<Account>().WithMany().HasForeignKey(s => s.AccountId).OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.AccountId, s.Date }).IsUnique();
         modelBuilder.Entity<BalanceSnapshot>().HasIndex(s => new { s.UserId, s.Date });
         modelBuilder.Entity<BalanceSnapshot>().Property(s => s.UserId).IsRequired();
