@@ -11,6 +11,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 ## [Unreleased]
 
 ### Added
+- Deploy-ready, nothing hosted: `docker-compose.prod.yml` puts Caddy
+  (automatic HTTPS, Let's Encrypt with a real domain) in front of the
+  API in Production, with nothing else published. `infra/main.bicep`
+  describes Azure Container Apps (API + migrate job, HTTPS-only ingress,
+  probes, platform secrets) and PostgreSQL Flexible Server (TLS 1.2+,
+  `VerifyFull`). `docs/DEPLOYMENT.md` covers deploy, release, rollback,
+  secret rotation, teardown and cost (#123)
 - The API runs in Docker: a multi-stage image (`docker build .`) that
   runs as a non-root user, with a `migrate` command (migrations as the
   schema owner, then `pf_app`'s login, with no EF tooling needed) and
@@ -269,6 +276,13 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   a dev database)
 
 ### Security
+- HTTPS-only outside local development: HSTS for a year with subdomains,
+  HTTP redirected (health probes exempt, since platforms call them over
+  plain HTTP), `X-Forwarded-For`/`-Proto` trusted from one proxy hop
+  only and only when `ReverseProxy:Enabled`, and `nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a
+  `default-src 'none'` CSP and a restrictive `Permissions-Policy` on
+  every response (#123)
 - Envelope encryption for stored secrets: Plaid access tokens, and now
   TOTP secrets and MFA recovery codes too (Identity stored those in
   plain text). Each secret gets its own AES-256-GCM data key, wrapped by

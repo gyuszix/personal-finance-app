@@ -1,0 +1,23 @@
+# TLS-terminating reverse proxy for `docker compose -f docker-compose.yml -f docker-compose.prod.yml` (#123).
+#
+# DOMAIN=localhost (the default): Caddy issues a certificate from its own
+# local CA - trust it with `docker compose ... exec caddy caddy trust`, or
+# use curl -k. DOMAIN=api.example.com with DNS pointing here and ports
+# 80/443 open: a real Let's Encrypt certificate, renewed automatically.
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	# Caddy sets X-Forwarded-For/-Proto itself and drops whatever a client
+	# sent in them (no trusted_proxies configured), so the API - which only
+	# trusts this one hop (ReverseProxy:Enabled) - can't be fed a fake IP.
+	reverse_proxy api:8080 {
+		health_uri /health/ready
+		health_interval 15s
+	}
+
+	header {
+		-Server
+	}
+}
+
+# Caddy redirects http:// to https:// on its own; the API adds HSTS.

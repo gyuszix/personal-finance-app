@@ -31,6 +31,7 @@ builder.Services.AddRealtimeUpdates();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecksSetup();
+builder.Services.AddHttpsHardening(builder.Configuration, builder.Environment);
 
 // Skip the scheduled sync job in Testing - integration tests spin up a
 // fresh, empty database per test class, so it would just be dead weight
@@ -169,9 +170,10 @@ if (app.Environment.IsDevelopment())
 }
 
 // ── Middleware pipeline ───────────────────────────────────────────────────────
+// Forwarded headers first, so everything after sees the real scheme and client.
+app.UseHttpsHardening();
 app.UseRequestLogging();
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,0 +1,46 @@
+# Production-shaped local stack (#123): HTTPS through Caddy, the API in the
+# Production environment behind it, nothing else reachable from outside.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   curl -k https://localhost/health/ready
+#
+# With a real domain: DOMAIN=api.example.com in .env, DNS A/AAAA record to
+# this host, ports 80 and 443 open - Caddy gets a Let's Encrypt certificate.
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Trust X-Forwarded-* from Caddy - safe only because the API's port
+      # isn't published below, so Caddy is the only way in.
+      ReverseProxy__Enabled: "true"
+      Plaid__WebhookUrl: ${PLAID_WEBHOOK_URL:-}
+    ports: !reset []
+
+  postgres:
+    ports: !reset []
+
+  aspire-dashboard:
+    # No login on it: only from this machine.
+    ports: !override
+      - "127.0.0.1:18888:18888"
+
+  caddy:
+    image: caddy:2.11.9
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data      # certificates - keep across restarts
+      - caddy-config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
