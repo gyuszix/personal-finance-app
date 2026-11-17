@@ -31,7 +31,7 @@ The MAUI client talks to the ASP.NET Core backend over REST (plus a SignalR hub 
 - **Auth:** 10-minute JWT access tokens + refresh tokens that rotate on every use, stored only as SHA-256 hashes, grouped into a family per login (7 days per token, 30 days per session). Reusing an already-rotated refresh token revokes that session's family, not the user's other devices. The native app keeps its refresh token in the OS keychain. Browser clients get it in an `HttpOnly; Secure; SameSite=Strict` cookie instead (`?useCookies=true`) (#115). Optional TOTP two-factor authentication with one-time recovery codes. Wrong passwords and codes share a lockout (5 tries per 15 minutes), and an accepted TOTP code can't be replayed (#117). Security events are written to an append-only audit log the user can see (#116). Plaid access tokens, TOTP secrets and recovery codes are envelope-encrypted at rest: a random data key per secret, wrapped by a key-encryption key that lives in configuration, never in the database, with a re-wrap command for key rotation (#120, [`docs/KEY_MANAGEMENT.md`](docs/KEY_MANAGEMENT.md)).
 - **Categorization:** Plaid's `personal_finance_category` taxonomy.
 - **API:** versioned `/api/v1/` minimal APIs, offset pagination, per-user isolation in two layers: EF Core global query filters on `UserId` for accounts, transactions, balance snapshots and budgets (failing closed when no user is signed in), and behind them **Postgres row-level security** on the same tables, with the API running as a role it applies to (#119, see [Database roles](#database-roles)). **Planned:** keyset (cursor) pagination.
-- **Deployment:** local only for now. Postgres runs in Docker via `docker-compose`; the API runs with `dotnet run`. **Planned:** containerise the API.
+- **Deployment:** containerised: a multi-stage, non-root API image whose `migrate` command applies migrations without EF tooling, `/health/live` and `/health/ready` probes, and a `docker compose` stack of Postgres, migrations, the API and the Aspire dashboard (#122). Not hosted yet.
 - **Client:** MVVM (CommunityToolkit), server is the source of truth.
 
 ## Project structure
@@ -42,6 +42,23 @@ src/
 ├── PersonalFinance.Shared/   DTOs shared between API and client
 └── PersonalFinance.App/      .NET MAUI client (Views, ViewModels, Services)
 ```
+
+## Quick start (Docker)
+
+The whole stack, with no .NET SDK needed:
+
+```bash
+cp .env.example .env     # fill in Plaid sandbox keys; generate the rest as the comments say
+docker compose up --build
+```
+
+| | |
+|---|---|
+| API | http://localhost:5140 (interactive docs at `/scalar/v1`) |
+| Health | `/health/live`, `/health/ready` |
+| Logs, traces, metrics | http://localhost:18888 (Aspire dashboard) |
+
+`migrate` runs first: it applies the EF migrations as the schema owner, gives `pf_app` its password, and exits. The API starts once it has succeeded. It runs as a non-root user and connects as `pf_app` under row-level security (#122). The MAUI app's default `http://localhost:5140` points at it unchanged.
 
 ## Local development
 

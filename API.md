@@ -4,6 +4,13 @@ Backend base URL in local dev: `http://localhost:5140` (see `Properties/launchSe
 
 This document describes the API surface as it exists today, for building a client against it without reading the backend source. See [`CHANGELOG.md`](CHANGELOG.md) for what changed when.
 
+## Health
+
+Not versioned, not authenticated, not rate-limited. Plain-text `Healthy` / `Unhealthy` with no detail.
+
+- `GET /health/live`: `200` while the process is serving. A platform restarts the container if this fails.
+- `GET /health/ready`: `200` when the database answers, `503` otherwise. A platform routes traffic only to ready instances.
+
 ## Auth
 
 Everything under `/api/v1/transactions`, `/api/v1/accounts`, and `/api/v1/plaid` requires a JWT access token:

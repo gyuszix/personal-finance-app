@@ -30,6 +30,7 @@ builder.Services.AddSummaryCaching();
 builder.Services.AddRealtimeUpdates();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddHealthChecksSetup();
 
 // Skip the scheduled sync job in Testing - integration tests spin up a
 // fresh, empty database per test class, so it would just be dead weight
@@ -44,6 +45,32 @@ if (!builder.Environment.IsEnvironment("Testing"))
 var app = builder.Build();
 
 // ── One-off commands ──────────────────────────────────────────────────────────
+// `migrate`: applies EF migrations as the schema owner
+// (ConnectionStrings:Migrations), then - if Database:AppRolePassword is set -
+// lets pf_app sign in with it. What the compose `migrate` service and the
+// deploy job run, so production needs no EF tooling (#122).
+if (args.FirstOrDefault() == "migrate")
+{
+    var ownerConnection = app.Configuration.GetConnectionString("Migrations")
+        ?? throw new InvalidOperationException("migrate needs ConnectionStrings:Migrations (the schema owner).");
+    var ownerOptions = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ownerConnection).Options;
+    await using var owner = new AppDbContext(ownerOptions, new HttpContextAccessor());
+
+    var pending = (await owner.Database.GetPendingMigrationsAsync()).ToList();
+    app.Logger.LogInformation("Applying {Count} migrations: {Migrations}", pending.Count, pending);
+    await owner.Database.MigrateAsync();
+
+    var appRolePassword = app.Configuration["Database:AppRolePassword"];
+    if (!string.IsNullOrEmpty(appRolePassword))
+    {
+        // Can't be a bind parameter in DDL; quote it as a literal instead.
+        var literal = "'" + appRolePassword.Replace("'", "''") + "'";
+        await owner.Database.ExecuteSqlRawAsync($"ALTER ROLE pf_app LOGIN PASSWORD {literal}");
+        app.Logger.LogInformation("pf_app can sign in");
+    }
+    return 0;
+}
+
 // `dotnet run --project src/PersonalFinance.Api -- rewrap-secrets`: key
 // rotation, moving every stored secret onto the current KEK (#120).
 if (args.FirstOrDefault() == "rewrap-secrets")
@@ -132,6 +159,7 @@ apiV1.MapAuditEndpoints();
 apiV1.MapMfaEndpoints();
 
 app.MapHub<TransactionsHub>("/hubs/transactions");
+app.MapHealthEndpoints();
 
 if (app.Environment.IsDevelopment())
 {

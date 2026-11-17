@@ -1,0 +1,22 @@
+# Only src/PersonalFinance.Api, src/PersonalFinance.Shared and
+# Directory.Build.props go into the image (see Dockerfile).
+**/bin/
+**/obj/
+**/.vs/
+**/.idea/
+**/*.user
+**/appsettings.Development.json
+**/appsettings.*.local.json
+**/launchSettings.json
+.git/
+.github/
+.claude/
+.env
+.env.*
+docs/
+infra/
+scripts/
+src/PersonalFinance.App/
+src/PersonalFinance.Tests/
+*.md
+*.svg
