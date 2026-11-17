@@ -38,17 +38,22 @@ public sealed class TelemetryTests : IClassFixture<FakePlaidWebApplicationFactor
         var protector = _factory.Services.GetRequiredService<PlaidTokenProtector>();
         var account = await user.AddAccountAsync(accessToken: protector.Protect("access-sandbox-otel", user.Id), plaidAccountId: plaidId);
         _factory.Plaid.SyncPages(new() { [""] = Page("c1", added: [Txn($"otel-{plaidId}", plaidId, 3m)]) });
-        _factory.Plaid.Balances("item-otel", (plaidId, 1m));
+        _factory.Plaid.Balances("item-otel-balances", (plaidId, 1m));
 
+        // Unique, because the listener also sees other test classes' syncs.
+        var itemId = $"item-otel-{Guid.NewGuid():N}";
         using (var scope = _factory.SystemScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Accounts.IgnoreQueryFilters().Where(a => a.AccountId == account.AccountId)
+                .ExecuteUpdateAsync(a => a.SetProperty(x => x.PlaidItemId, itemId));
             var accounts = await db.Accounts.IgnoreQueryFilters().Where(a => a.AccountId == account.AccountId).ToListAsync();
             await scope.ServiceProvider.GetRequiredService<PlaidSyncService>().SyncItemAsync(accounts);
         }
 
         var span = Assert.Single(_stopped, a => a.OperationName == "plaid.sync_item"
-                                                && Equals(a.GetTagItem("plaid.sync.added"), 1));
+                                                && Equals(a.GetTagItem("plaid.item.id"), itemId));
+        Assert.Equal(1, span.GetTagItem("plaid.sync.added"));
         Assert.Equal(ActivityStatusCode.Unset, span.Status);
         // Its database work nests under it. (Plaid's HTTP spans would too,
         // but the fake Plaid replaces the handler that creates them.)
