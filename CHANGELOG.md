@@ -10,6 +10,24 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-17
+
+The Dashboard's insight cards and budgets (#85-#108), then the v0.3.0
+hardening milestone (#110-#128): security, data integrity, shipping and
+observability, plus categorisation rules and recurring charges. Free and
+self-hostable throughout: no paid service is required. The threat model in
+[`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) ties the security items
+together.
+
+**Upgrading from 0.2.0** (details in the README and each linked doc):
+- Set a key-encryption key: `Encryption:Keys:k1` + `Encryption:CurrentKeyId`
+  (`scripts/new-kek.sh`). The API won't start without one (#120).
+- Connect as `pf_app` (`ConnectionStrings:Default`) and run migrations as
+  the owner (`ConnectionStrings:Migrations`). Give `pf_app` a login (#119).
+- Every user signs in once more: refresh tokens are now stored hashed (#115).
+- Optionally run `rewrap-secrets` to move existing Plaid tokens off Data
+  Protection (#120).
+
 ### Added
 - Recurring card on the Cash Flow tab: subscriptions and bills found in
   your spending, with what they cost a month in total and the next
@@ -169,6 +187,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   taking the whole login down if Keychain access ever fails again
 
 ### Changed
+- Integration tests run against a real Postgres 16 via Testcontainers
+  instead of in-memory SQLite, with the schema built from the real
+  migrations, so a broken migration fails the suite. Docker must be
+  running. `scripts/test.sh` runs the same steps as CI locally (#111)
 - Deleting someone else's transaction now returns `404` instead of
   `403`. Row-level security hides the row entirely, matching the
   accounts endpoints and not revealing that the id exists (#119)
@@ -293,6 +315,10 @@ come with a matching git tag (`vX.Y.Z`) and an entry here.
   a dev database)
 
 ### Security
+- ASP.NET Core and EF Core packages bumped to 10.0.15:
+  `Microsoft.AspNetCore.SignalR.Common` 10.0.11 was affected by
+  CVE-2026-70159 / GHSA-334f-vvp4-7g6p, a High-severity denial of
+  service (#128)
 - HTTPS-only outside local development: HSTS for a year with subdomains,
   HTTP redirected (health probes exempt, since platforms call them over
   plain HTTP), `X-Forwarded-For`/`-Proto` trusted from one proxy hop

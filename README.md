@@ -1,6 +1,6 @@
 # Personal Finance Tracker
 
-**Version:** [0.2.0](CHANGELOG.md#020---2026-09-08)
+**Version:** [0.3.0](CHANGELOG.md#030---2026-11-17) · [Architecture](#architecture) · [Threat model](docs/THREAT_MODEL.md) · [Quick start](#quick-start-docker)
 
 
 <img width="2560" height="1519" alt="Screenshot 2026-10-13 at 12 54 48" src="https://github.com/user-attachments/assets/c92f913e-b065-450b-aae5-8ab3ba8fd288" />
@@ -10,7 +10,7 @@
 
 A cross-platform personal finance app that connects to bank accounts (via Plaid) and provides spending insights, transaction history, and budget tracking. One .NET MAUI codebase targets iOS, Android, macOS (Mac Catalyst) and Windows.
 
-> **Work in progress.** Developed and run on macOS so far; the iOS, Android and Windows builds aren't device-tested yet. The architecture below is the target design. Where the current code isn't there yet, the gap is marked **Planned**.
+> **Work in progress.** Developed and run on macOS so far; the iOS, Android and Windows builds aren't device-tested yet. The architecture below describes what the code does today. Anything not built yet is marked **Planned**.
 
 ## Tech stack
 
@@ -20,9 +20,51 @@ A cross-platform personal finance app that connects to bank accounts (via Plaid)
 | Backend | ASP.NET Core (Minimal APIs) |
 | Auth | ASP.NET Identity + JWT |
 | ORM / DB | Entity Framework Core + PostgreSQL |
-| Bank data | Plaid API |
+| Bank data | Plaid API (sync cursors + verified webhooks) |
+| Security | Row-level security, envelope encryption, TOTP MFA, audit log |
+| Observability | Serilog + OpenTelemetry (OTLP; Aspire dashboard locally) |
+| Shipping | Docker, Docker Compose, Testcontainers, Caddy / Azure Container Apps (Bicep) |
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    subgraph Client["MAUI app (iOS · Android · macOS · Windows)"]
+        UI["Views + ViewModels<br/>(MVVM Toolkit)"]
+        Keychain[("OS keychain<br/>refresh token")]
+        Cache[("offline cache<br/>first page")]
+        Link["Plaid Link<br/>(WebView)"]
+    end
+
+    subgraph Host["Container host / Azure Container Apps"]
+        Proxy["TLS proxy<br/>Caddy or ingress · HSTS"]
+        subgraph API["ASP.NET Core API (runs as pf_app)"]
+            Endpoints["REST /api/v1<br/>+ SignalR hub"]
+            Auth["JWT 10 min · refresh-token families<br/>TOTP MFA · audit log"]
+            Sync["Plaid sync<br/>per-Item row lock · upserts"]
+            Webhook["/plaid/webhook<br/>ES256 verified → queue"]
+            Crypto["Envelope encryption<br/>KEK from config"]
+        end
+        PG[("PostgreSQL 16<br/>row-level security")]
+        OTel["OTLP backend<br/>(Aspire dashboard locally)"]
+    end
+
+    Plaid[("Plaid API")]
+
+    UI -- "HTTPS · Bearer JWT" --> Proxy --> Endpoints
+    Endpoints -. "SignalR: sync completed" .-> UI
+    UI --- Keychain
+    UI --- Cache
+    Link -- "public token" --> UI
+    Endpoints --> Auth
+    Endpoints --> Sync
+    Plaid -- "webhook (signed)" --> Proxy --> Webhook --> Sync
+    Sync -- "/transactions/sync, balances" --> Plaid
+    Sync --> Crypto
+    Auth --> PG
+    Sync --> PG
+    API -- "logs · traces · metrics" --> OTel
+```
 
 The MAUI client talks to the ASP.NET Core backend over REST (plus a SignalR hub for sync notifications). The backend owns all business logic, auth, and every Plaid API call. Plaid secrets and access tokens never reach the client: it only handles a short-lived link token and the one-time public token from Plaid Link, which runs in a WebView. The client receives the user's transactions to display, and caches the first page locally for offline use.
 
@@ -290,6 +332,7 @@ way public repos leak secrets to a malicious PR).
 - [`CHANGELOG.md`](CHANGELOG.md) — what shipped, by version
 - [`API.md`](API.md) — full endpoint reference (request/response shapes, auth flow) for building against this backend without reading its source
 - [`docs/PLAID_SANDBOX.md`](docs/PLAID_SANDBOX.md) — Plaid Sandbox test credentials for local/GUI development
+- [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) — assets, trust boundaries, STRIDE threats with the code that mitigates each, and the risks knowingly accepted
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — hosting runbook: Docker host with Caddy, or Azure (deploy, release, rollback, secret rotation, teardown, cost)
 - [`docs/KEY_MANAGEMENT.md`](docs/KEY_MANAGEMENT.md) — envelope encryption of stored secrets, where the keys live, and KEK rotation
 - [`docs/DB_INDEXES.md`](docs/DB_INDEXES.md) — why each index exists, with before/after `EXPLAIN ANALYZE` at 1M transactions and how to re-run the benchmark
