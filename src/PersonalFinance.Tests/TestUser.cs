@@ -36,7 +36,7 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
 
     public async Task<Account> AddAccountAsync(
         decimal balance = 100m, string accountType = "Depository", string accessToken = "protected-token",
-        string? subtype = null)
+        string? subtype = null, string? plaidAccountId = null)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -47,7 +47,7 @@ public sealed class TestUser(TestWebApplicationFactory factory, string id, HttpC
             AccountType = accountType,
             Subtype = subtype,
             Balance = balance,
-            PlaidAccountId = Guid.NewGuid().ToString(),
+            PlaidAccountId = plaidAccountId ?? Guid.NewGuid().ToString(),
             PlaidAccessToken = accessToken
         };
         db.Accounts.Add(account);

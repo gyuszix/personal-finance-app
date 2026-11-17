@@ -51,7 +51,10 @@ public class TestWebApplicationFactory : WebApplicationFactory<Program>
                 ["ConnectionStrings:Default"] = ConnectionString,
                 ["Jwt:Key"] = "super-secret-test-key-that-is-long-enough-32chars",
                 ["Jwt:Issuer"] = "PersonalFinance.Api",
-                ["Jwt:Audience"] = "PersonalFinance.Api"
+                ["Jwt:Audience"] = "PersonalFinance.Api",
+                ["Plaid:ClientId"] = "test-client",
+                ["Plaid:Secret"] = "test-secret",
+                ["Plaid:Environment"] = "Sandbox"
             });
         });
     }

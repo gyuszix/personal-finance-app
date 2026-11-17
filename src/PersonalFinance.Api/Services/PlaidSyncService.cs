@@ -27,7 +27,14 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
 
     try
     {
-      return await SyncItemCoreAsync(itemAccounts);
+      // One DB transaction per Item sync: the transactions, balances and the
+      // cursor that produced them commit together or not at all (#114).
+      await using var tx = await db.Database.BeginTransactionAsync();
+      var lockedAccounts = await LockItemAsync(itemAccounts);
+      if (lockedAccounts.Count == 0) return (0, 0, 0);
+      var result = await SyncItemCoreAsync(lockedAccounts);
+      await tx.CommitAsync();
+      return result;
     }
     catch
     {
@@ -38,6 +45,27 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
       DiscardUnsavedChanges();
       throw;
     }
+  }
+
+  // Two syncs of one Item at once (the schedule, a manual sync, a webhook,
+  // another API instance) would both start from the same cursor, fetch the
+  // same pages and race to insert the same transactions. Lock the Item's
+  // account rows for the rest of the transaction instead: a second syncer
+  // waits here until the first commits, then reloads the cursor the first
+  // one saved and carries on from there, so each page is applied once.
+  // Ordered by id so two lockers can't deadlock over a shared row.
+  // Returns the accounts that still exist once the lock is held - one
+  // unlinked while we waited is gone (ReloadAsync detaches it).
+  private async Task<List<Account>> LockItemAsync(IReadOnlyList<Account> itemAccounts)
+  {
+    var ids = itemAccounts.Select(a => a.AccountId).Order().ToArray();
+    await db.Database.ExecuteSqlAsync(
+      $"""SELECT 1 FROM "Accounts" WHERE "AccountId" = ANY({ids}) ORDER BY "AccountId" FOR UPDATE""");
+
+    foreach (var account in itemAccounts)
+      await db.Entry(account).ReloadAsync();
+
+    return itemAccounts.Where(a => db.Entry(a).State != EntityState.Detached).ToList();
   }
 
   private void DiscardUnsavedChanges()
@@ -65,6 +93,19 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
     var cursor = cursors.Count == 1 ? cursors[0] : null;
     bool hasMore;
 
+    // Every transaction this sync has touched, saved or only tracked so far,
+    // by Plaid ID - across all pages. A pending transaction added on one page
+    // and removed on a later one (it posted) exists only here until the save.
+    var known = new Dictionary<string, Transaction>();
+    async Task LoadKnownAsync(IEnumerable<string?> plaidIds)
+    {
+      var missing = plaidIds.OfType<string>().Where(id => !known.ContainsKey(id)).Distinct().ToList();
+      if (missing.Count == 0) return;
+      foreach (var stored in await db.Transactions.IgnoreQueryFilters()
+                 .Where(t => missing.Contains(t.PlaidTransactionId)).ToListAsync())
+        known[stored.PlaidTransactionId] = stored;
+    }
+
     do
     {
       var response = await plaid.TransactionsSyncAsync(new TransactionsSyncRequest
@@ -79,13 +120,17 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
         throw new InvalidOperationException(
           $"Plaid /transactions/sync failed: {response.Error.ErrorCode} {response.Error.ErrorMessage}");
 
-      var addedIds = response.Added.Select(t => t.TransactionId).ToList();
-      var existingById = await db.Transactions
-        .IgnoreQueryFilters()
-        .Where(t => addedIds.Contains(t.PlaidTransactionId))
-        .ToDictionaryAsync(t => t.PlaidTransactionId);
+      // Added and modified are both upserts. Plaid can replay a page we've
+      // already applied (a cursor that was reset, or rows that disagree), and
+      // can report a modification of a transaction we never stored (e.g. one
+      // added before this account was linked to the app): either way the
+      // latest version wins and each Plaid transaction stays one row.
+      var changed = response.Added.Select(t => (Plaid: t, IsModification: false))
+        .Concat(response.Modified.Select(t => (Plaid: t, IsModification: true)))
+        .ToList();
+      await LoadKnownAsync(changed.Select(c => c.Plaid.TransactionId).Concat(response.Removed.Select(r => r.TransactionId)));
 
-      foreach (var pt in response.Added)
+      foreach (var (pt, isModification) in changed)
       {
         if (!accountsByPlaidId.TryGetValue(pt.AccountId ?? "", out var account))
         {
@@ -95,60 +140,38 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
           continue;
         }
 
-        // Already stored (a replayed cursor) - just make sure it's attributed
-        // to the right account, which older per-account syncs got wrong.
-        if (existingById.TryGetValue(pt.TransactionId ?? "", out var existing))
+        if (!known.TryGetValue(pt.TransactionId ?? "", out var transaction))
         {
-          existing.AccountId = account.AccountId;
-          existing.UserId = account.UserId;
-          continue;
+          transaction = new Transaction { PlaidTransactionId = pt.TransactionId! };
+          db.Transactions.Add(transaction);
+          known[transaction.PlaidTransactionId] = transaction;
+          added++;
+        }
+        else if (isModification)
+        {
+          modified++;
         }
 
-        db.Transactions.Add(new Transaction
-        {
-          AccountId = account.AccountId,
-          UserId = account.UserId,
-          Amount = (decimal)pt.Amount,
-          Description = pt.MerchantName ?? pt.Name ?? "Unknown",
-          Date = pt.Date.HasValue
-            ? DateTime.SpecifyKind(pt.Date.Value.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
-            : DateTime.UtcNow,
-          PlaidTransactionId = pt.TransactionId,
-          IsPending = pt.Pending ?? false,
-          PendingTransactionId = pt.PendingTransactionId,
-          CategoryPrimary = pt.PersonalFinanceCategory?.Primary,
-          CategoryDetailed = pt.PersonalFinanceCategory?.Detailed
-        });
-        added++;
-      }
-
-      foreach (var pt in  response.Modified)
-      {
-        var existing = await db.Transactions
-          .IgnoreQueryFilters()
-          .FirstOrDefaultAsync(t => t.PlaidTransactionId == pt.TransactionId);
-
-        if (existing is null) continue;
-
-        existing.Amount = (decimal)pt.Amount;
-        existing.Description = pt.MerchantName ?? pt.Name ?? "Unknown";
-        existing.IsPending = pt.Pending ?? false;
-        existing.CategoryPrimary = pt.PersonalFinanceCategory?.Primary;
-        existing.CategoryDetailed = pt.PersonalFinanceCategory?.Detailed;
-        modified++;
+        // Also re-attributes rows older per-account syncs stored against the
+        // wrong account.
+        transaction.AccountId = account.AccountId;
+        transaction.UserId = account.UserId;
+        transaction.Amount = pt.Amount ?? 0m;
+        transaction.Description = pt.MerchantName ?? pt.Name ?? "Unknown";
+        transaction.Date = pt.Date.HasValue
+          ? DateTime.SpecifyKind(pt.Date.Value.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
+          : transaction.Date == default ? DateTime.UtcNow : transaction.Date;
+        transaction.IsPending = pt.Pending ?? false;
+        transaction.PendingTransactionId = pt.PendingTransactionId;
+        transaction.CategoryPrimary = pt.PersonalFinanceCategory?.Primary;
+        transaction.CategoryDetailed = pt.PersonalFinanceCategory?.Detailed;
       }
 
       foreach (var rt in response.Removed)
       {
-        var existing = await db.Transactions
-          .IgnoreQueryFilters()
-          .FirstOrDefaultAsync(t => t.PlaidTransactionId == rt.TransactionId);
-
-        if (existing is not null)
-        {
-          db.Transactions.Remove(existing);
-          removed++;
-        }
+        if (rt.TransactionId is null || !known.Remove(rt.TransactionId, out var gone)) continue;
+        db.Transactions.Remove(gone);
+        removed++;
       }
 
       cursor = response.NextCursor;
@@ -162,6 +185,14 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
       AccessToken = accessToken
     });
 
+    if (balanceResponse.Error is not null)
+      throw new InvalidOperationException(
+        $"Plaid /accounts/balance/get failed: {balanceResponse.Error.ErrorCode} {balanceResponse.Error.ErrorMessage}");
+
+    // Webhooks name the Item, not the account (#114); backfills accounts
+    // linked before the Item ID was stored.
+    var itemId = balanceResponse.Item?.ItemId;
+
     foreach (var plaidAccount in balanceResponse.Accounts)
     {
       if (accountsByPlaidId.TryGetValue(plaidAccount.AccountId, out var account))
@@ -169,6 +200,7 @@ public class PlaidSyncService(PlaidClient plaid, AppDbContext db, ILogger<PlaidS
         account.Balance = (decimal)(plaidAccount.Balances.Current ?? 0);
         // Also backfills accounts linked before the subtype was stored.
         account.Subtype = plaidAccount.Subtype?.ToString();
+        account.PlaidItemId ??= itemId;
       }
     }
 

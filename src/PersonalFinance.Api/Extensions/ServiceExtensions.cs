@@ -167,11 +167,12 @@ public static class ServiceExtensions
         services.AddScoped<PlaidInstitutionService>();
         services.Configure<PlaidOptions>(config.GetSection("Plaid"));
         services.AddHttpClient();
-        services.AddSingleton<PlaidClient>(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<PlaidOptions>>();
-            return new PlaidClient(options);
-        });
+        // Through IHttpClientFactory, so handler lifetimes are managed and
+        // tests can put a fake Plaid behind the real SDK (#114).
+        services.AddSingleton<PlaidClient>(sp => new PlaidClient(
+            sp.GetRequiredService<IOptions<PlaidOptions>>(),
+            sp.GetRequiredService<IHttpClientFactory>(),
+            sp.GetRequiredService<ILogger<PlaidClient>>()));
         // Data Protection encrypts the stored Plaid access tokens, so its key
         // ring must outlive the process and be shared by every instance -
         // lose it and every token stops decrypting (#57). The framework

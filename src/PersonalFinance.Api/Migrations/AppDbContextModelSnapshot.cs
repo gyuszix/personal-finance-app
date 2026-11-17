@@ -182,6 +182,9 @@ namespace PersonalFinance.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PlaidItemId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Subtype")
                         .HasColumnType("text");
 
@@ -196,6 +199,8 @@ namespace PersonalFinance.Api.Migrations
 
                     b.HasIndex("PlaidAccountId")
                         .IsUnique();
+
+                    b.HasIndex("PlaidItemId");
 
                     b.HasIndex("UserId");
 
